@@ -15,7 +15,7 @@ from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, \
 class EncoderLSTM(nn.Module):
 
 
-	def __init__(self, input_size, hidden_size, use_embedding, vocab_size, pad_idx):
+	def __init__(self, input_size, hidden_size, use_embedding, vocab_size, pad_idx, num_layers):
 		'''
 			input_size: feature size of the input
 			hidden_size: size of the hidden state of the LSTM
@@ -31,14 +31,14 @@ class EncoderLSTM(nn.Module):
 		self.use_embedding = use_embedding
 		self.vocab_size = vocab_size
 		self.pad_idx = pad_idx
+        self.num_layers = num_layers
 
-		self.lstm = nn.LSTM(input_size, hidden_size, bidirectional=True)
+		self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True)
 
 		if(self.use_embedding):
 			assert self.vocab_size is not None
 			self.pad_idx = pad_idx
 			self.embed = nn.Embedding(self.vocab_size , self.input_size, padding_idx=pad_idx)
-
 
 	def forward(self, x):
 		'''
@@ -54,19 +54,25 @@ class EncoderLSTM(nn.Module):
 			x_embed = x if self.use_embedding is False else x_embed = PackedSequence(self.embed(x))
 		else:
 			x_embed = x if self.use_embedding is False else x_embed = self.embed(x)
-		#output:[seq_len,batch,hidden_size*num_directions](if input not as PackedSeq)
-		#h_n:[num_layers * num_directions, batch, hidden_size]
-		output, h_n = self.lstm(x_embed)
 
-        #h_n_fixed has the final hidden states for all the sequences in the batch
-		h_n_fixed = h_n.transpose(0,1).contiguos().view(-1, 2 * self.hidden_size)
+        #output:[seq_len,batch,hidden_size*num_directions](if input not as PackedSeq)
+		output, H_n = self.lstm(x_embed)
+
+        # h_n, c_n are of Size [num_layers * num_directions, batch, hidden_size]
+        h_n = H_n[0]  #Hidden States
+        c_n = H_n[1]  #Cell States of the LSTM
+
+        #h_n_fixed has the final hidden states for all the sequences in the batch , [batch_size, num_layers * num_directions , 2 * hidden_size ]
+		h_n_fixed = h_n.transpose(0,1).contiguos()
+        c_n_fixed = c_n.transpose(0,1).contiguos()
 
         if isinstance(output, PackedSequence):
-            output, lengths = pad_packed_sequence(output) #output is of size Max_seq_length * batch * 2 * hidden_size
+            output, lengths = pad_packed_sequence(output) #output is of size [Max_seq_length , batch , 2 * hidden_size]
 
         else:
-            lengths = [output.size(0)] * output.size(1)   # [batch_size] * length_of_sequence
+            lengths = [output.size(0)] * output.size(1)   # [length_of_sequence] * batch_size
 
-        output_t = output.transpose(0,1).contiguos() # Flattening the array
+        #output_t = output.transpose(0,1).view(-1, 2 * self.hidden_size) # Flattening the array
+        output_t = output.transpose(0,1) # Dimension : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
         return output_t, lengths, h_n_fixed
