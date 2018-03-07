@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_Sequence, PackedSequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad,const_row
 
+class Attention_Context(nn.Module):
     def __init__(self, encoder_dim, decoder_dim):
             '''
                 Constructor for Attention_Context Class
