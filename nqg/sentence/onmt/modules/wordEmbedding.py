@@ -5,6 +5,11 @@ import torch.utils.model_zoo as model_zoo
 from torch.autograd import Variable
 import math
 
+# Parameters:
+#   * `vocabSize` - size of the vocabulary
+#   * `vecSize` - size of the embedding
+#   * `preTrainined` - path to a pretrained vector file
+#   * `fix` - keep the weights of the embeddings fixed.
 
 class WordEmbedding(nn.Module):
 	def __init__(self, vocabSize, vecSize, preTrained, fix):
@@ -18,3 +23,13 @@ class WordEmbedding(nn.Module):
 			temp = torch.load(preTrained)
 			# self.net.load_state_dict(temp)
 			self.model.WENet.load_state_dict(temp)
+
+			self.fix = fix
+			if self.fix:
+				self.net.zero_grad()
+
+	def postParametersInitialization():
+        # This value is taken from onmt/Constants
+		PAD = 1
+        # Careful: lua tensor indices start from 1
+		self.net.weight.data[PAD-1] = torch.FloatTensor(self.net.weight[PAD-1].size()).zero_()
