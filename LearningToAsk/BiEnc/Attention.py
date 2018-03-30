@@ -28,12 +28,12 @@ class Attention_Context(nn.Module):
             # self.sim_matrix is the similarity matrix which is used for calculating attention energies
             self.sim_matrix = nn.Linear(self.decoder_dim, self.encoder_dim)
 
-    def forward(self, decoder_states, encoder_states, mask=None):
+    def forward(self, encoder_states, decoder_states, mask=None):
         '''
         forward function:
             inputs:
-                decoder_states      : Hidden state of the Decoder LSTM (Size: [ Batch_size , self.decoder_dim ] )
-                encoder_states      : Hidden States of the Encoder Sequence ( Size: [Batch_Size, T, self.encoder_dim] )
+                decoder_states      : Output of the Decoder LSTM (Size: [ Batch_size , self.decoder_dim ] )
+                encoder_states      : Output of the Encoder Sequence ( Size: [Batch_Size, T, self.encoder_dim] )
                 rnn_mask            : Mask is a boolean Matrix (Size : [Batch_Size , T ] ). Has 1 for each row where sequence elements are present and 0 where
                                       sequence elements are absent
             output:

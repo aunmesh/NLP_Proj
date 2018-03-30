@@ -10,10 +10,9 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
 from Attention import Attention_Context
-# vocab size, embedding_size, encoder_dim, decoder_hidden dimension, eos_token, bos_token
 
 
-class Decoder(nn.Module):
+class DecoderLSTM(nn.Module):
     def __init__(self, encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim=600, target_vocab_size=28000,
                  lstm_layers=2, target_embedding_dim=300):
 
@@ -45,7 +44,7 @@ class Decoder(nn.Module):
 
         # W_t :  * (encoder_hidden_dim + decoder_hidden_dim)
 
-        super(Decoder, self).__init__()
+        super(DecoderLSTM, self).__init__()
         self.target_vocab_size = target_vocab_size
         self.target_embed_dim = target_embedding_dim
 
@@ -58,9 +57,13 @@ class Decoder(nn.Module):
         self.dec_lstm = nn.LSTM(self.target_embed_dim, self.dec_h_dim, num_layers=self.lstm_layers, batch_first=True,
                             dropout=0.3)
 
-    def forward(self, context_old, y_old, h_old, c_old):
+    def forward(self, y_old, prev_state):
 
-        output, H_new = self.dec_lstm(y_old, (h_old, c_old))
+        output, H_new = self.dec_lstm(y_old, prev_state)
 
+        h_new = H_new[0]
+        c_new = H_new[1]
 
-        return h_new, c_new
+        # Since sequence length is 1 => h_new[1] == output
+
+        return output, (h_new, c_new)

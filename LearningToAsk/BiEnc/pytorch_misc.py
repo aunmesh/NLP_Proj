@@ -10,6 +10,8 @@ from __future__ import unicode_literals
 from torch.autograd import Variable
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_sequence
+
+
 def packed_seq_iter(packed_seq):
     """
     Returns an iterator for a PackedSequence, where Time is first dim
@@ -60,7 +62,6 @@ def transpose_packed_sequence(ps):
     return PackedSequence(data[perm], seq_lens)
 
 
-
 def rnn_mask(context_lens):
     """
     Creates a mask for variable length sequences
@@ -80,6 +81,7 @@ def rnn_mask(context_lens):
 def seq_lengths_from_pad(x, pad_idx):
     lengths = x.size(0) - (x == pad_idx).int().sum(0)[0]
     return lengths.data.tolist()
+
 
 def pad_list(data):
     """
@@ -149,6 +151,7 @@ def pad_list(data):
 #         out = out[self.perm].contiguous()
 #         return out, transpose_batch_sizes(lengths)
 
+
 def batch_index_iterator(len_l, batch_size, skip_end=True):
     """
     Provides indices that iterate over a list
@@ -165,6 +168,7 @@ def batch_index_iterator(len_l, batch_size, skip_end=True):
 
     for b_start in range(0, iterate_until, batch_size):
         yield (b_start, min(b_start+batch_size, len_l))
+
 
 def batch_map(f, a, batch_size):
     """

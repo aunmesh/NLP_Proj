@@ -18,7 +18,7 @@ from Attention import Attention_Context
 class DecoderMLP(nn.Module):
     def __init__(self, encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim=600, target_vocab_size=28000):
 
-        ############ NOTE ####################
+        ##################### NOTE ####################
         # 1. find mlp_hidden_dim. not given in paper
         # 2.
         # embedding, pad_idx, Wt_row_size, bos_token=0,
@@ -49,7 +49,7 @@ class DecoderMLP(nn.Module):
         mlp_input = torch.cat((h_t, c_t), 1)
         y_temp0 = self.mlp_wt(mlp_input)
         y_temp1 = F.tanh(y_temp0)
-        y_temp2 = F.softmax(y_temp1)
-        y_new = self.mlp_ws(y_temp2)
+        y_temp2 = self.mlp_ws(y_temp1)
+        y_new = F.softmax(y_temp2)
 
         return y_new

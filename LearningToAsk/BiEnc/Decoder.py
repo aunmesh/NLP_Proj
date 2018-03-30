@@ -1,41 +1,47 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import unicode_literal
+from __future__ import unicode_literals
 
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_packed_Sequence, PackedSequence
-from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad,const_row
+from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
+from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
 from Attention import Attention_Context
 # vocab size, embedding_size, encoder_dim, decoder_hidden dimension, eos_token, bos_token
 
+
 class DecoderLSTM(nn.Module):
-    def __init__(self, embedding, encoder_hidden_dim, decoder_hidden_dim, pad_idx ,Wt_row_size, bos_token=0, eos_token=1,
-    decoder_layers = 2, decoder_dropout_prob = 0.3, max_size=15):
+    def __init__(self, embedding, encoder_hidden_dim, decoder_hidden_dim, pad_idx, Wt_row_size, bos_token=0,
+                 eos_token=1, decoder_layers=2, decoder_dropout_prob=0.3, max_size=15, target_vocab_size=28000):
         '''
             Input Args:
-                embeddings          : nn.Embedding Layer containing Word embedding_size
+                embeddings          : nn.Embedding Layer containing source_vocab_size * embedding_size
                 encoder_hidden_dim  : Hidden Dimension of The Encoder (To be used for attention while Decoding)
                 decoder_hidden_dim  : Hidden Dimension of The Decoder (To be used for attention while Decoding)
                 pad_idx             : pad_idx for the embedding
-                Wt_row_size         : Number of Rows in first layer(Ws) of classification module.(Column size is decoder_hidden_dim + encoder_hidden_dim)
+                Wt_row_size         : Number of Rows in first layer(Ws) of classification module.
+                (Column size is decoder_hidden_dim + encoder_hidden_dim)
                 bos_token           : Beginning of Sentence token
                 eos_token           : End of Sentence token
                 decoder_layers      : Number of Layers in the Decoder
                 decoder_dropout_prob: Dropout Ratio to be applied in the decoder LSTM hidden layers
                 max_size            : Max size of the output sequence
             Note:
-                1. Note that the Encoder and Decoder Vocabularies are of different sizes. This is checked using assert condition using a self.vocab_size.
-                   Check its Value.
-                2. Encoder_hidden_dim is same as 2 * Hidden_Unit_Size of Encoder_LSTM. (2 is due to Bidirectional Forward Pass and further Concatentation)
+                1. Note that the Encoder and Decoder Vocabularies are of different sizes.
+                    This is checked using assert condition using a self.vocab_size.
+                    Check its Value.
+                2. Encoder_hidden_dim is same as 2 * Hidden_Unit_Size of Encoder_LSTM.
+                    (2 is due to Bidirectional Forward Pass and further Concatentation)
         '''
+
         super(DecoderLSTM, self).__init__()
-        self.vocab_size = 28000
-        self.embedding = embedding #Target Vaocabulary embedding
-        assert(self.embedding.weight.size(0) == self.vocab_size),"Embedding Passed is not of the required length {}".format(self.vocab_size)
+        self.target_vocab_size = target_vocab_size
+        # Target Vaocabulary embedding
+        self.embedding = embedding
+        assert(self.embedding.weight.size(0) == self.target_vocab_size), "Embedding Passed is not of the required length {}".format(self.target_vocab_size)
 
         self.embed_dim = self.embedding.weight.size(1)
 
@@ -49,12 +55,12 @@ class DecoderLSTM(nn.Module):
         self.decoder_dropout_prob = decoder_dropout_prob
         self.max_size = max_size
 
-        self.decoder = nn.LSTM( self.embed_dim , self.decoder_hidden_dim , self.decoder_layers , dropout = self.decoder_dropout_prob)
+        self.decoder = nn.LSTM(self.embed_dim, self.decoder_hidden_dim, self.decoder_layers, dropout=self.decoder_dropout_prob)
 
-        self.Wt = nn.Linear( self.decoder_hidden_dim + self.encoder_hidden_dim , self.Wt_row_size)
-        self.Ws = nn.Linear( self.Wt_row_size , self.embed_dim )
+        self.Wt = nn.Linear(self.decoder_hidden_dim + self.encoder_hidden_dim, self.Wt_row_size)
+        self.Ws = nn.Linear(self.Wt_row_size, self.embed_dim)
 
-        self.Attention = Attention_Context( self.encoder_dim , self.decoder_dim )
+        self.Attention = Attention_Context(self.encoder_dim, self.decoder_dim)
 
         def forward(self, encoded_input, input_data):
             '''

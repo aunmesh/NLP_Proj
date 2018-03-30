@@ -14,7 +14,7 @@ from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_
 
 
 class EncoderLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, use_embedding, vocab_size, pad_idx, num_layers):
+    def __init__(self, input_size, hidden_size, use_embedding, vocab_size, pad_idx=None, num_layers=2):
         '''
             input_size: feature size of the input
             hidden_size: size of the hidden state of the LSTM
@@ -38,7 +38,7 @@ class EncoderLSTM(nn.Module):
             self.pad_idx = pad_idx
             self.embed = nn.Embedding(self.vocab_size , self.input_size, padding_idx=pad_idx)
 
-    def forward(self, x):
+    def forward(self, x, initial_state):
         '''
             Input:
                 x           :   input batch of sequences, Can be a PackedSequence
@@ -54,8 +54,10 @@ class EncoderLSTM(nn.Module):
         else:
             x_embed = x if self.use_embedding is False else self.embed(x)
 
+
+
         # output:[seq_len,batch,hidden_size*num_directions](if input not as PackedSeq)
-        output, H_n = self.lstm(x_embed)
+        output, H_n = self.lstm(x_embed, initial_state)
 
         # h_n, c_n are of Size [num_layers * num_directions, batch, hidden_size]
         h_n = H_n[0]  # Hidden States
@@ -75,4 +77,4 @@ class EncoderLSTM(nn.Module):
         # output_t = output.transpose(0,1).view(-1, 2 * self.hidden_size) # Flattening the array
         output_t = output.transpose(0,1) # Dimension : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
-        return output_t, output_lengths, h_n_fixed
+        return output_t, output_lengths, (h_n_fixed, c_n_fixed)
