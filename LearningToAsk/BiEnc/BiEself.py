@@ -12,7 +12,9 @@ from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_
 
 # Encoder Neural Net for encoding a Sequence using BiDirectional LSTM
 
-
+##################################################
+# Make this Batch First
+###############################################
 class EncoderLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, use_embedding, vocab_size, pad_idx=None, num_layers=2):
         '''
@@ -38,7 +40,7 @@ class EncoderLSTM(nn.Module):
             self.pad_idx = pad_idx
             self.embed = nn.Embedding(self.vocab_size , self.input_size, padding_idx=pad_idx)
 
-    def forward(self, x, initial_state):
+    def forward(self, x):
         '''
             Input:
                 x           :   input batch of sequences, Can be a PackedSequence
@@ -57,7 +59,7 @@ class EncoderLSTM(nn.Module):
 
 
         # output:[seq_len,batch,hidden_size*num_directions](if input not as PackedSeq)
-        output, H_n = self.lstm(x_embed, initial_state)
+        output, H_n = self.lstm(x_embed)
 
         # h_n, c_n are of Size [num_layers * num_directions, batch, hidden_size]
         h_n = H_n[0]  # Hidden States
