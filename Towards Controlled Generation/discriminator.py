@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 # from keras.preprocessing import sequence
 # from keras.datasets import imdb
 
@@ -22,7 +23,7 @@ class Discriminator(nn.Module):
                 # Useful links here:
                 # Padding: https://github.com/nicolas-ivanov/tf_seq2seq_chatbot/issues/15
                 # Using CNNs for text classification: http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/
-                self.word_embedding = nn.Embedding(n_ques_vocab, d_wordvec, padding_idx=0)
+                self.src_word_emb = nn.Embedding(n_ques_vocab, d_wordvec, padding_idx=0)
                 # Next few line copied verbatim from : https://github.com/GBLin5566/toward-controlled-generation-of-text-pytorch/blob/master/Model/Modules.py
                 # This is the classification convnet
                 # Dropout probability = dropout
