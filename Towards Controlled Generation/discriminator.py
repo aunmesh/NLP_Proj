@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+# from keras.preprocessing import sequence
+# from keras.datasets import imdb
 
 
 # Defining the Encoder
@@ -10,9 +12,9 @@ class Discriminator(nn.Module):
     def __init__(
                 self,
                 n_ques_vocab,
-                maxlen,
-                dropout=
-                d_wordvec,
+                maxlen=10,
+                d_wordvec=100,
+                dropout=0.1,
                 usecuda=False
                 ):
                 super(Discriminator, self).__init__()
@@ -30,3 +32,5 @@ class Discriminator(nn.Module):
                 self.conv2 = nn.Conv1d(128, 128, kernel_size=5)
                 self.conv3 = nn.Conv1d(128, 128, kernel_size=5)
                 self.softmax = nn.LogSoftmax()
+
+    def forward():
