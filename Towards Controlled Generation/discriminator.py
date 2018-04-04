@@ -33,4 +33,22 @@ class Discriminator(nn.Module):
                 self.conv3 = nn.Conv1d(128, 128, kernel_size=5)
                 self.softmax = nn.LogSoftmax()
 
-    def forward():
+
+    def forward(self, input_sentence, is_softmax=False, dont_pass_emb=False):
+        if dont_pass_emb:
+            emb_sentence = input_sentence
+        else:
+            emb_sentence = self.src_word_emb(input_sentence)
+        relu1 = F.relu(self.conv1(emb_sentence))
+        layer1 = F.max_pool1d(relu1, 3)
+        relu2 = F.relu(self.conv2(layer1))
+        layer2 = F.max_pool1d(relu2, 3)
+        layer3 = F.max_pool1d(F.relu(self.conv2(layer2)), 10)
+        flatten = self.drop(layer2.view(layer3.size()[0], -1))
+        if not hasattr(self, 'linear'):
+            self.linear = nn.Linear(flatten.size()[1], 2)
+            self.linear = check_cuda(self.linear, self.use_cuda)
+        logit = self.linear(flatten)
+        if is_softmax:
+            logit = self.softmax(logit)
+        return logit
