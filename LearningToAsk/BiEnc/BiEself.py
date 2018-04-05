@@ -38,7 +38,7 @@ class EncoderLSTM(nn.Module):
             assert self.vocab_size is not None
             assert self.pad_idx is not None
             self.pad_idx = pad_idx
-            self.embed = nn.Embedding(self.vocab_size , self.input_size, padding_idx=pad_idx)
+            self.embed = nn.Embedding(self.vocab_size , self.input_size, padding_idx=pad_idx)  #Make sure this is Glove Embeddings
 
     def forward(self, x):
         '''

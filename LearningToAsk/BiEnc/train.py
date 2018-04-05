@@ -58,10 +58,14 @@ def main():
 
     for e in range(0, epochs):
         for it, batch in enumerate(train_loader):
+
+        		print(e,it,batch)
                 loss = train_batch(batch, encoder, decoder, attention, mlp, criterion,
                                    (encoder_optimizer, decoder_optimizer), max_output_size)
+                
                 if it % 10 == 0:
                     print(e, it, loss)
+
 
 
 

@@ -30,8 +30,8 @@ class DecoderMLP(nn.Module):
         #     decoder_hidden_dim  : Hidden Dimension of The Decoder (To be used for attention while Decoding)
         #     target_vocab_size : target vocabulary size (different from the source in our case)
 
-        # W_t : mlp_hidden_dim * (encoder_hidden_dim + decoder_hidden_dim)
-        # W_s : target_embedding_dim * mlp_hidden_dim
+        # W_t : [mlp_hidden_dim, (encoder_hidden_dim + decoder_hidden_dim)]
+        # W_s : [target_embedding_dim, mlp_hidden_dim]
 
         super(DecoderMLP, self).__init__()
         self.target_vocab_size = target_vocab_size
@@ -41,15 +41,18 @@ class DecoderMLP(nn.Module):
         self.dec_h_dim = decoder_hidden_dim
 
         self.mlp_h_dim = mlp_hidden_dim
+
         self.mlp_wt = nn.Linear(self.enc_h_dim + self.dec_h_dim, self.mlp_h_dim)
         self.mlp_ws = nn.Linear(self.mlp_h_dim, self.target_vocab_size)
 
     def forward(self, h_t, c_t):
 
         mlp_input = torch.cat((h_t, c_t), 1)
+
         y_temp0 = self.mlp_wt(mlp_input)
         y_temp1 = F.tanh(y_temp0)
         y_temp2 = self.mlp_ws(y_temp1)
+        
         y_new = F.softmax(y_temp2)
 
         return y_new
