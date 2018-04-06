@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
-from Attention import Attention_Context
+from Attention import AttentionContext
 # vocab size, embedding_size, encoder_dim, decoder_hidden dimension, eos_token, bos_token
 
 
@@ -60,7 +60,7 @@ class DecoderLSTM(nn.Module):
         self.Wt = nn.Linear(self.decoder_hidden_dim + self.encoder_hidden_dim, self.Wt_row_size)
         self.Ws = nn.Linear(self.Wt_row_size, self.embed_dim)
 
-        self.Attention = Attention_Context(self.encoder_dim, self.decoder_dim)
+        self.Attention = AttentionContext(self.encoder_dim, self.decoder_dim)
 
         def forward(self, encoded_input, input_data):
             '''

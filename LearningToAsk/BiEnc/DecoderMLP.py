@@ -3,16 +3,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from torch.autograd import Variable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
-from Attention import Attention_Context
-
-
-# vocab size, embedding_size, encoder_dim, decoder_hidden dimension, eos_token, bos_token
 
 
 class DecoderMLP(nn.Module):

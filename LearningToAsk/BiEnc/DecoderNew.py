@@ -3,13 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from torch.autograd import Variable
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
-from Attention import Attention_Context
 
 
 class DecoderLSTM(nn.Module):
@@ -21,7 +17,7 @@ class DecoderLSTM(nn.Module):
         # 2.
         # embedding, pad_idx, Wt_row_size, bos_token=0,
         #  eos_token=1, , decoder_dropout_prob=0.3, max_size=15, ):
-        '''
+        """
             Input Args:
                 embeddings          : nn.Embedding Layer containing source_vocab_size * embedding_size
                 encoder_hidden_dim  : Hidden Dimension of The Encoder (To be used for attention while Decoding)
@@ -40,9 +36,7 @@ class DecoderLSTM(nn.Module):
                     Check its Value.
                 2. Encoder_hidden_dim is same as 2 * Hidden_Unit_Size of Encoder_LSTM.
                     (2 is due to Bidirectional Forward Pass and further Concatentation)
-        '''
-
-        # W_t :  * (encoder_hidden_dim + decoder_hidden_dim)
+        """
 
         super(DecoderLSTM, self).__init__()
         self.target_vocab_size = target_vocab_size
@@ -53,9 +47,8 @@ class DecoderLSTM(nn.Module):
         self.dec_h_dim = decoder_hidden_dim
         self.lstm_layers = lstm_layers
 
-
-        self.dec_lstm = nn.LSTM(self.target_embed_dim, self.dec_h_dim, num_layers=self.lstm_layers, batch_first=True,
-                            dropout=0.3)
+        self.dec_lstm = nn.LSTM(self.target_embed_dim, self.dec_h_dim, num_layers=self.lstm_layers,
+                                batch_first=True, dropout=0.3)
 
     def forward(self, y_old, prev_state):
 
