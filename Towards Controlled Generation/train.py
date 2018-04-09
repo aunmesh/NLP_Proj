@@ -47,6 +47,7 @@ backward_dict = {}
 for key, value in forward_dict.items():
     backward_dict[value] = key
 
+# Input is a sequence of sentences. The pad_sequences ensures each question is same length by padding short questions. The maximum length is constrained to be maxlen.
 x_train = sequence.pad_sequences(
         x_train,
         maxlen=maxlen,
@@ -69,6 +70,8 @@ def get_batch(data, index, batch_size, testing=False):
     output_data = input_data
     return input_data, output_data
 
+# This gets the questions from data[index] to data[index+batch_size].
+# Essentially, fetches a batch of data and it's labels
 def get_batch_label(data, label, index, batch_size, testing=False):
     tensor = torch.from_numpy(data[index:index+batch_size]).type(torch.LongTensor)
     input_data = Variable(tensor, volatile=testing, requires_grad=False)
