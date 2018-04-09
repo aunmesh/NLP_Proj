@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 
 
@@ -27,7 +28,7 @@ Args:
 '''
 
 
-def train_batch(batch, encoder, decoder, attention, mlp, criterion, optimizers, max_output_size):
+def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output_size):
 
     for opt in optimizers:
         opt.zero_grad()
@@ -41,9 +42,9 @@ def train_batch(batch, encoder, decoder, attention, mlp, criterion, optimizers, 
     
     question_batch_indices = batch[1]               # a packed Sequence as Target passages can be of different lengths
  
-    question_indices_batch, question_lengths = pad_packed_sequence( question_batch_indices ) # output is of size [Max_seq_length , batch , 2 * hidden_size]
+    question_indices_batch, question_lengths = pad_packed_sequence( question_batch_indices, batch_first = False, padding_value=0 ) # output is of size [Max_seq_length , batch , 2 * hidden_size]
 
-    batch_size = question_lengths.size()[0]
+    batch_size = len( question_lengths )
 
     # Ignoring initial Encoder states for now, encoder_output : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
@@ -53,14 +54,25 @@ def train_batch(batch, encoder, decoder, attention, mlp, criterion, optimizers, 
     
     encoder_cell_states = encoder_states[1]
 
-    dh_0 = torch.cat((encoder_hidden_states[0], encoder_hidden_states[1]), 1)
+    dh_0_1 = torch.cat((encoder_hidden_states[0], encoder_hidden_states[1]), 1)
+    dh_0_2 = torch.cat((encoder_hidden_states[2], encoder_hidden_states[3]), 1)
+    dh_0 = torch.stack((dh_0_1 , dh_0_2), 0)
 
-    dc_0 = torch.cat( ( encoder_cell_states[0], encoder_cell_states[1] ), 1)
+    dc_0_1 = torch.cat((encoder_cell_states[0], encoder_cell_states[1]), 1)
+    dc_0_2 = torch.cat((encoder_cell_states[2], encoder_cell_states[3]), 1)
+    dc_0 = torch.stack((dc_0_1 , dc_0_2), 0)
+    print("DEBUG")
+    print(encoder_hidden_states)
+    #print(dh_0.size())
+    #print(dc_0.size())
+
     
     # dc_0 = torch.zeros( dh_0.size() )
     
     decoder_prev_state = (dh_0, dc_0)
-    prev_token = None                              # DEFINE: <SOS>token embedding
+    #prev_token = None                              # DEFINE: <SOS>token embedding
+    prev_token = Variable(torch.randn(batch_size,1,300))
+
 
     # Final Size : [Batch_Size, Max_Seq_Length]
     total__probab__tensor = torch.ones((batch_size, 1))

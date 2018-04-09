@@ -3,8 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
+from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence, pack_padded_sequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
 from torch import optim
 from Attention import AttentionContext
@@ -12,6 +13,26 @@ from BiEself import EncoderLSTM
 from DecoderNew import DecoderLSTM
 from DecoderMLP import DecoderMLP
 from train_batch import train_batch
+from torch.autograd import Variable
+
+import numpy as np
+
+def random_data(batch_size):
+	sentences = np.random.randint(1,10,10*batch_size, dtype=int)
+	sentences = sentences.reshape(batch_size,10)
+
+	questions =  np.random.randint(1,7,6*batch_size, dtype=int)
+	questions =  questions.reshape(batch_size,6)
+	#torch.nn.utils.rnn.pack_padded_sequence(input, lengths, batch_first=False)
+	temp = ( Variable( torch.from_numpy(sentences), requires_grad=False),Variable( torch.from_numpy(questions), requires_grad=False) )
+	
+	lengths_sentences = [10] * batch_size
+	lengths_questions = [6] * batch_size
+
+	temp1 = pack_padded_sequence( temp[0], lengths_sentences, batch_first=True)
+	temp2 = pack_padded_sequence( temp[1], lengths_questions, batch_first=True)
+
+	return ( temp1, temp2 )
 
 
 def main():
@@ -36,8 +57,6 @@ def main():
     mlp = DecoderMLP(encoder_hidden_dim, mlp_hidden_dim)
     decoder = DecoderLSTM(encoder_hidden_dim, mlp_hidden_dim)
 
-    criterion = nn.CrossEntropyLoss()                   # WRONG
-
     encoder_learning_rate = 0.01
     decoder_learning_rate = 0.01
 
@@ -45,9 +64,10 @@ def main():
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=decoder_learning_rate)
 
     dataset_size = 50000                                # Not the actual value
-    batch_size = 64
+    batch_size = 10
+	
 
-    train_loader = None                                 # define a dataset loader
+    train_loader = [random_data(batch_size) for b in range(10) ]                                 # define a dataset loader
 
     max_output_size = 20
     epochs = 10
@@ -56,7 +76,7 @@ def main():
     for e in range(0, epochs):
         for it, batch in enumerate(train_loader):
             print(e,it,batch)
-            loss = train_batch(batch, encoder, decoder, attention, mlp, criterion,
+            loss = train_batch(batch, encoder, decoder, attention, mlp,
                                (encoder_optimizer, decoder_optimizer), max_output_size)
 
             if it % 10 == 0:

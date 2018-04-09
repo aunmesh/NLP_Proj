@@ -52,6 +52,12 @@ class DecoderLSTM(nn.Module):
 
     def forward(self, y_old, prev_state):
 
+	print("PT1")
+	print(y_old.size())
+	print("PT2")
+	print(prev_state[0].size())
+	print(prev_state[1].size())
+	print("PT3")
         output, H_new = self.dec_lstm(y_old, prev_state)
 
         h_new = H_new[0]

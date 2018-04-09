@@ -30,11 +30,12 @@ class EncoderLSTM(nn.Module):
         self.use_embedding = use_embedding
         self.vocab_size = vocab_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True)
+        self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True,batch_first = True)
+	self.pad_idx = pad_idx
 
         if self.use_embedding :
             assert self.vocab_size is not None
-            assert self.pad_idx is not None
+            #assert self.pad_idx is not None
             self.pad_idx = pad_idx
 
             # Make sure this is Glove Embedding
@@ -54,10 +55,9 @@ class EncoderLSTM(nn.Module):
 
         print('X size is {}'.format(x.data.size()))
         if isinstance(x, PackedSequence):
-            x_embed = x if self.use_embedding is False else PackedSequence(self.embed(x))
+            x_embed = x if self.use_embedding is False else PackedSequence(self.embed(x[0]), x[1])
         else:
             x_embed = x if self.use_embedding is False else self.embed(x)
-
         # output : [seq_len,batch,hidden_size * num_directions](if input not as PackedSeq)
         output, H_n = self.lstm(x_embed)
 
@@ -67,18 +67,19 @@ class EncoderLSTM(nn.Module):
 
         # h_n_fixed has the final hidden states for all the sequences in the batch
         # Size : [batch_size, num_layers * num_directions , 2 * hidden_size ]
-        h_n_fixed = h_n.transpose(0,1).contiguos()
-        c_n_fixed = c_n.transpose(0,1).contiguos()
+        #h_n_fixed = h_n.transpose(0,1)#.contiguos()
+        #c_n_fixed = c_n.transpose(0,1)#.contiguos()
 
         if isinstance(output, PackedSequence):
             output, output_lengths = pad_packed_sequence(output)    # output : [max_seq_length, batch, 2 * hidden_size]
 
         else:
-            output_lengths = [output.size(0)] * output.size(1)      # [length_of_sequence] * batch_size
+            output_lengths = [output.size(1)] * output.size(0)      # [length_of_sequence] * batch_size
 
         # output_t = output.transpose(0,1).view(-1, 2 * self.hidden_size) # Flattening the array
 
         # Dimension : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
-        output_t = output.transpose(0,1)
+        #output_t = output.transpose(0,1)
 
-        return output_t, output_lengths, (h_n_fixed, c_n_fixed)
+
+        return output, output_lengths, (h_n, c_n)
