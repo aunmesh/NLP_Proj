@@ -101,10 +101,10 @@ def pad_list(data):
 #     def __init__(self, x, seq_lens=None, pad_idx=None):
 #         """
 #         Initializes a PackedShuffledSequence
-#         :param data: Several options:
+#         :param Data: Several options:
 #                      1. can be a [max_T, batch_size] array that is padded by pad_idx, or with
 #                         sequence lengths seq_lens
-#                      2. can be an array where the sequences are concatenated, ie, data[:t_1] is the
+#                      2. can be an array where the sequences are concatenated, ie, Data[:t_1] is the
 #                         first sequence
 #         :param seq_lens: Lengths of the sequences
 #         :param pad_idx: Pad index
@@ -126,7 +126,7 @@ def pad_list(data):
 #         use_concat = x.size(0) == sum(self.seq_lens)
 #
 #         if use_concat:
-#             self.sorted_data = x.data.new(sum(self.seq_lens), *x.size()[1:]).zero_()
+#             self.sorted_data = x.Data.new(sum(self.seq_lens), *x.size()[1:]).zero_()
 #             raise NotImplementedError()
 #         else:
 #             sorted_l = []

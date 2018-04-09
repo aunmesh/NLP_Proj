@@ -48,7 +48,7 @@ class DecoderLSTM(nn.Module):
         self.encoder_hidden_dim = encoder_hidden_dim
         self.decoder_hidden_dim = decoder_hidden_dim
         self.pad_idx = pad_idx
-        self.Wt_row_size = Ws_row_size
+        self.Wt_row_size = Wt_row_size
         self.bos_token = bos_token
         self.eos_token = eos_token
         self.decoder_layers = decoder_layers
@@ -179,7 +179,7 @@ embeddin
             # Do argmax (since we're doing greedy decoding)
             toks.append(out.max(1)[1].squeeze(1))
 
-            lens[(toks[-1].data == self.eos_token) & (lens == 0)] = l+1
+            lens[(toks[-1].Data == self.eos_token) & (lens == 0)] = l+1
             if all(lens):
                 break
         lens[lens == 0] = max_len+1
@@ -201,7 +201,7 @@ embeddin
             return self._sample(state, context, mask, max_len)
 
         if isinstance(input_data, PackedSequence):
-            tf_out = self._teacher_force(state, input_data.data, input_data.batch_sizes, context, mask)
+            tf_out = self._teacher_force(state, input_data.Data, input_data.batch_sizes, context, mask)
             return PackedSequence(tf_out, input_data.batch_sizes)
 
         # Otherwise, it's a normal torch tensor
