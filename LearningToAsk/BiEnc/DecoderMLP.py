@@ -11,7 +11,7 @@ from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_
 
 
 class DecoderMLP(nn.Module):
-    def __init__(self, encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim=600, target_vocab_size=28000):
+    def __init__(self, encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim=600, target_vocab_size=6):
 
         ##################### NOTE ####################
         # 1. find mlp_hidden_dim. not given in paper
@@ -41,6 +41,9 @@ class DecoderMLP(nn.Module):
         self.mlp_ws = nn.Linear(self.mlp_h_dim, self.target_vocab_size)
 
     def forward(self, h_t, c_t):
+
+	h_t = h_t.squeeze(1)
+	
 
         mlp_input = torch.cat((h_t, c_t), 1)
 

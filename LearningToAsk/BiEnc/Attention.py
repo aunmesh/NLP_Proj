@@ -44,20 +44,21 @@ class AttentionContext(nn.Module):
         """
         B_size = decoder_states.size(0)
 
-        assert (decoder_states.size(1) == self.decoder_dim), \
+        assert (decoder_states.size(2) == self.decoder_dim), \
             "Input Decoder States feature length are not consistent with the values given to the Constructor!"
         assert(B_size == encoder_states.size(0)), \
             "encoder_states and decoder_states batch sizes are not consistent!"
+
         assert(self.encoder_dim == encoder_states.size(2)), \
             "Input Encoder States feature length are not consistent with the values given to the Constructor!"
 
-        decoder_states = decoder_states.contiguos()
+        #decoder_states = decoder_states.contiguos()
 
         # Transformed States of Decoder (Linear Transform) to bring it in the same dimension as encoder_dim
-        decoder_transformed = self.sim_matrix(decoder_states)
+        decoder_transformed = self.sim_matrix(decoder_states).transpose(1,2)
 
         # Unsqueezing the 2D Matrix a 3D Matrix for Batch Multiplication Purposes
-        decoder_transformed_mat = decoder_transformed.unsqueeze(2)
+        decoder_transformed_mat = decoder_transformed#.unsqueeze(2)
 
         # Attention Energies are calculated
         # Result is of Size [Batch_size , T]
@@ -81,6 +82,12 @@ class AttentionContext(nn.Module):
             # Size [batch_size, T]
             alpha = F.softmax(attention__energies)
 
-        attended__context = torch.bmm(alpha.unsqueeze(1), self.encoder_states).squeeze(1)
+        attended__context = torch.bmm(alpha.unsqueeze(1), encoder_states).squeeze(1)
+
+	'''
+	print("debug")
+	print(alpha.sum(0))
+	print(attended__context)
+	'''
 
         return attended__context, alpha

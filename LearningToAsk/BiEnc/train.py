@@ -18,10 +18,10 @@ from torch.autograd import Variable
 import numpy as np
 
 def random_data(batch_size):
-	sentences = np.random.randint(1,10,10*batch_size, dtype=int)
+	sentences = np.random.randint(1,9,10*batch_size, dtype=int)
 	sentences = sentences.reshape(batch_size,10)
 
-	questions =  np.random.randint(1,7,6*batch_size, dtype=int)
+	questions =  np.random.randint(1,5,6*batch_size, dtype=int)
 	questions =  questions.reshape(batch_size,6)
 	#torch.nn.utils.rnn.pack_padded_sequence(input, lengths, batch_first=False)
 	temp = ( Variable( torch.from_numpy(sentences), requires_grad=False),Variable( torch.from_numpy(questions), requires_grad=False) )
@@ -53,9 +53,9 @@ def main():
     mlp_hidden_dim = 100                                # find an apt value from the original torch code
 
     encoder = EncoderLSTM(input_feature_dim, encoder_hidden_dim, use_embedding, source_vocab_size)
-    attention = AttentionContext(encoder_hidden_dim, decoder_hidden_dim)
-    mlp = DecoderMLP(encoder_hidden_dim, mlp_hidden_dim)
-    decoder = DecoderLSTM(encoder_hidden_dim, mlp_hidden_dim)
+    attention = AttentionContext(2*encoder_hidden_dim, decoder_hidden_dim)
+    mlp = DecoderMLP(2*encoder_hidden_dim, mlp_hidden_dim)
+    decoder = DecoderLSTM(encoder_hidden_dim, decoder_hidden_dim)
 
     encoder_learning_rate = 0.01
     decoder_learning_rate = 0.01

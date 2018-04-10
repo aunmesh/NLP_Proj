@@ -9,7 +9,7 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 
 
-target_vocab_size = 28000
+target_vocab_size = 6
 input_size = 300
 target_embedding = nn.Embedding(target_vocab_size , input_size)  # Make sure this is Glove Embeddings
 
@@ -20,7 +20,8 @@ def get_token_embedding(softmax_vector):
 
 
 def get_ground_truth_probab(softmax_vector, question_indices):
-    return softmax_vector.gather(1, question_indices.view(-1,1) )
+
+    return softmax_vector.gather(1, question_indices.unsqueeze(1) )
 
 '''
 Args:
@@ -42,7 +43,7 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     
     question_batch_indices = batch[1]               # a packed Sequence as Target passages can be of different lengths
  
-    question_indices_batch, question_lengths = pad_packed_sequence( question_batch_indices, batch_first = False, padding_value=0 ) # output is of size [Max_seq_length , batch , 2 * hidden_size]
+    question_indices_batch, question_lengths = pad_packed_sequence( question_batch_indices, batch_first = True, padding_value=0 ) # output is of size [Max_seq_length , batch , 2 * hidden_size]
 
     batch_size = len( question_lengths )
 
@@ -61,10 +62,6 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     dc_0_1 = torch.cat((encoder_cell_states[0], encoder_cell_states[1]), 1)
     dc_0_2 = torch.cat((encoder_cell_states[2], encoder_cell_states[3]), 1)
     dc_0 = torch.stack((dc_0_1 , dc_0_2), 0)
-    print("DEBUG")
-    print(encoder_hidden_states)
-    #print(dh_0.size())
-    #print(dc_0.size())
 
     
     # dc_0 = torch.zeros( dh_0.size() )
@@ -75,8 +72,8 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
 
 
     # Final Size : [Batch_Size, Max_Seq_Length]
-    total__probab__tensor = torch.ones((batch_size, 1))
-
+    total__probab__tensor = Variable(torch.ones((batch_size, 1)))
+    dummy = 0
     for step in range(max_output_size):
         print(step)
 
@@ -88,11 +85,18 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
         next_token = get_token_embedding(softmax_vector)
 
         # In the Loss Calculation We only need the probability of the actual Ground truth. Note
-        total__probab__tensor = torch.cat(
-            (total__probab__tensor, get_ground_truth_probab(softmax_vector, question_batch_indices[:, step])), 1)
 
-        prev_token = next_token                     # List of next embeddings for the decoder
+	# If the step increases beyond the maximum length of any question in this batch, then we do slicing using a dummy variable. This won't matter as there is no contribution of these in final loss
+	try:
+		temp = get_ground_truth_probab(softmax_vector, question_indices_batch[:, step])
+	except:
+		temp = get_ground_truth_probab(softmax_vector, question_indices_batch[:, dummy])
+
+        total__probab__tensor = torch.cat( (total__probab__tensor, temp), 1)
+
+        prev_token = next_token.unsqueeze(1)                     # List of next embeddings for the decoder
         decoder_prev_state = decoder_next_state
+
 
     loss = 0
 
