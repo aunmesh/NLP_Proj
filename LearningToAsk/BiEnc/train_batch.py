@@ -25,10 +25,6 @@ def get_token_embedding(softmax_vector):
 
 def get_ground_truth_probab(softmax_vector, question_indices):
 
-    print("DEBUG")
-    print(softmax_vector)
-    print(question_indices)
-
     return softmax_vector.gather(1, question_indices.unsqueeze(1) )
 
 '''
@@ -59,7 +55,7 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
 
     # Ignoring initial Encoder states for now, encoder_output : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
-    encoder_output, encoder_output_len, encoder_states = encoder(source_batch_indices)
+    encoder_output, encoder_output_len, encoder_states, mask_source = encoder(source_batch_indices)
 
     encoder_hidden_states = encoder_states[0]       # [batch, num_layers * num_directions, hidden_size]
     
@@ -85,10 +81,9 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     total__probab__tensor = Variable(torch.ones((batch_size, 1)))
     dummy = 0
     for step in range(max_output_size):
-        print(step)
 
         decoder_next_output, decoder_next_state = decoder(prev_token, decoder_prev_state)
-        context_vec , __ = attention(encoder_output, decoder_next_output)
+        context_vec , __ = attention(encoder_output, decoder_next_output, mask_source)
 
         # softmax_vector : [ Batch_Size , Target_Vocab_Size ]
         softmax_vector = mlp(decoder_next_output, context_vec)

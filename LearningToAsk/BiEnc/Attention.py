@@ -76,19 +76,14 @@ class AttentionContext(nn.Module):
             # transpose is being taken so that expand as operation can be performed
             energies = energy__shifted.exp() * mask
 
-            energies_sum = energies.sum(1).expand_as(energies.transpose(0,1)).tranpose(0,1)
+            energies_sum = energies.sum(1).expand_as( torch.transpose(energies,0,1) )
+	    energies_sum = torch.transpose( energies_sum,0,1 )
             alpha = torch.div(energies, energies_sum) #Size [batch_size, T]
 
         else:
             # Size [batch_size, T]
-            alpha = F.softmax(attention__energies)
+            alpha = F.softmax(attention__energies, dim=1)
 
         attended__context = torch.bmm(alpha.unsqueeze(1), encoder_states).squeeze(1)
-
-	'''
-	print("debug")
-	print(alpha.sum(0))
-	print(attended__context)
-	'''
 
         return attended__context, alpha

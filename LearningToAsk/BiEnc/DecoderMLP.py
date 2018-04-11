@@ -50,7 +50,7 @@ class DecoderMLP(nn.Module):
         y_temp0 = self.mlp_wt(mlp_input)
         y_temp1 = F.tanh(y_temp0)
         y_temp2 = self.mlp_ws(y_temp1)
-        
-        y_new = F.softmax(y_temp2)
+
+        y_new = F.softmax(y_temp2, dim=1)
 
         return y_new

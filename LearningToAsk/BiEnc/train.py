@@ -140,9 +140,10 @@ def main():
 
     num_iteration = int(data_size / batch_size)
 
+
     for e in range(0, epochs):
         for it, batch in enumerate(train_loader(batch_size, num_iteration)):
-            print(e, it, batch)
+            print(e, it)
             loss = train_batch(batch, encoder, decoder, attention, mlp,
                                (encoder_optimizer, decoder_optimizer), max_output_size)
 

@@ -3,7 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import torch
 import torch.nn as nn
+from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_row
 
@@ -54,7 +56,6 @@ class EncoderLSTM(nn.Module):
         """
 
 
-        print('X size is {}'.format(x.data.size()))
         if isinstance(x, PackedSequence):
             x_embed = x if self.use_embedding is False else PackedSequence(self.embed(x[0]), x[1])
         else:
@@ -81,6 +82,11 @@ class EncoderLSTM(nn.Module):
 
         # Dimension : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
         #output_t = output.transpose(0,1)
+	
+	temp = max(output_lengths)
+	mask = Variable(torch.zeros( output.size(0), temp), requires_grad=False)
 
+	for ind,val in enumerate(output_lengths):
+		mask[ind,:val] = 1
 
-        return output, output_lengths, (h_n, c_n)
+        return output, output_lengths, (h_n, c_n), mask
