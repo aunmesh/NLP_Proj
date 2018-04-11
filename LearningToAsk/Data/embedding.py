@@ -49,34 +49,34 @@ def main():
 
     f = open("src_vocab.txt", "w")
     unknown_count = 0
-	
+
     for i, word in enumerate(words):
-	if i==0:						# represents <UNK> tag
-            f.write(w)
-	    f.write('\n')
+        if i==0:						# represents <UNK> tag
+            f.write(word)
+            f.write('\n')
             embedding[i] = np.asarray(map(float, [0]*dimension))
-	elif i==1:						# represents <SOS> tag
-            f.write(w)
-	    f.write('\n')	
+        elif i==1:						# represents <SOS> tag
+            f.write(word)
+            f.write('\n')
             embedding[i] = np.asarray(map(float, [-1]*dimension))
-	elif i==2:						# represents <EOS> tag
-            f.write(w)
-	    f.write('\n')
+        elif i==2:						# represents <EOS> tag
+            f.write(word)
+            f.write('\n')
             embedding[i] = np.asarray(map(float, [-2]*dimension))
-	else:		
-	    if word in TRANSLATE:
-	        word = TRANSLATE[word]
-    	    done = False
-	    for w in (word, word.upper(), word.lower()):
-	        if w in word2embedding:
-		    f.write(w)
-		    f.write('\n')
-		    embedding[i] = word2embedding[w]
-		    done = True
-		    break
-	    if not done:
-	        print("Unknown word: %s" % (word, ))
-	        unknown_count += 1
+        else:
+            if word in TRANSLATE:
+                word = TRANSLATE[word]
+                done = False
+            for w in (word, word.upper(), word.lower()):
+                if w in word2embedding:
+                    f.write(w)
+                    f.write('\n')
+                    embedding[i] = word2embedding[w]
+                    done = True
+                    break
+            if not done:
+                print("Unknown word: %s" % (word, ))
+                unknown_count += 1
 
     f.close()
 
@@ -98,18 +98,18 @@ def main():
     unknown_count = 0
     for i, word in enumerate(words):
         if i==0:						# represents <UNK> tag
-            f.write(w)
-	    f.write('\n')
-            embedding[i] = np.asarray(map(float, [0]*dimension))
-	elif i==1:						# represents <SOS> tag
-            f.write(w)
-	    f.write('\n')	
-            embedding[i] = np.asarray(map(float, [-1]*dimension))
-	elif i==2:						# represents <EOS> tag
-            f.write(w)
-	    f.write('\n')
-            embedding[i] = np.asarray(map(float, [-2]*dimension))
-	else:	
+            f.write(word)
+            f.write('\n')
+            embedding[i] = np.asarray(map(float, [0]* dimension))
+        elif i==1:						# represents <SOS> tag
+            f.write(word)
+            f.write('\n')
+            embedding[i] = np.asarray(map(float, [-1]* dimension))
+        elif i==2:						# represents <EOS> tag
+            f.write(word)
+            f.write('\n')
+            embedding[i] = np.asarray(map(float, [-2]* dimension))
+        else:
             if word in TRANSLATE:
                 word = TRANSLATE[word]
             done = False
