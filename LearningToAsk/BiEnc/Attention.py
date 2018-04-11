@@ -44,6 +44,7 @@ class AttentionContext(nn.Module):
         """
         B_size = decoder_states.size(0)
 
+
         assert (decoder_states.size(2) == self.decoder_dim), \
             "Input Decoder States feature length are not consistent with the values given to the Constructor!"
         assert(B_size == encoder_states.size(0)), \

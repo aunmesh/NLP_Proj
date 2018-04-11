@@ -11,7 +11,7 @@ from pytorch_misc import rnn_mask, packed_seq_iter, seq_lengths_from_pad, const_
 
 
 class DecoderMLP(nn.Module):
-    def __init__(self, encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim=600, target_vocab_size=6):
+    def __init__(self, encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim, target_vocab_size):
 
         ##################### NOTE ####################
         # 1. find mlp_hidden_dim. not given in paper

@@ -18,22 +18,6 @@ from torch.autograd import Variable
 import numpy as np
 
 
-def random_data(batch_size):
-    sentences = np.random.randint(1,9,10*batch_size, dtype=int)
-    sentences = sentences.reshape(batch_size,10)
-
-    questions =  np.random.randint(1,5,6*batch_size, dtype=int)
-    questions =  questions.reshape(batch_size,6)
-    #torch.nn.utils.rnn.pack_padded_sequence(input, lengths, batch_first=False)
-    temp = ( Variable( torch.from_numpy(sentences), requires_grad=False),Variable( torch.from_numpy(questions), requires_grad=False) )
-
-    lengths_sentences = [10] * batch_size
-    lengths_questions = [6] * batch_size
-
-    temp1 = pack_padded_sequence( temp[0], lengths_sentences, batch_first=True)
-    temp2 = pack_padded_sequence( temp[1], lengths_questions, batch_first=True)
-
-    return (temp1, temp2)
 
 
 def load_data(filename):
@@ -42,7 +26,7 @@ def load_data(filename):
     for line in file_handle:
         line = line.strip()
         line = line.split()
-        line = [int(i) for i in line]
+        line = [int(i) + 1 for i in line]   #Temporary fix for indices
         data.append(line)
     file_handle.close()
     return data
@@ -52,9 +36,12 @@ tgt_data = load_data('../Data/tgt_data_train.txt')
 data_size = len(src_data)
 batch_size = 100
 
+src_embedding_file = '../Data/source_train_output.npy'
+src_embedding = torch.from_numpy(np.load(src_embedding_file))
+
 
 def pad(tensor, max_length):
-    return torch.cat( ( tensor, torch.zeros((max_length)-tensor.size(0)) ) )
+    return torch.cat( ( tensor, torch.zeros((max_length)-tensor.size(0)).long() ) )
 
 
 def sort_batch(src, tgt, src_lengths, tgt_lengths):
@@ -90,7 +77,7 @@ def generate_batch(batch_size):
     for sentence in src_batch_sorted:
 
         temp_arr = np.asarray(sentence)
-        temp_tensor = torch.from_numpy(temp_arr).float()
+        temp_tensor = torch.from_numpy(temp_arr)
 
         src_batch_padded.append(pad(temp_tensor, max_src_length))
 
@@ -102,7 +89,7 @@ def generate_batch(batch_size):
     tgt_batch_padded = []
     for question in tgt_batch_sorted:
         temp_arr = np.asarray(question)
-        temp_tensor = torch.from_numpy(temp_arr).float()
+        temp_tensor = torch.from_numpy(temp_arr)
 
 
         tgt_batch_padded.append(pad(temp_tensor, max_tgt_length))
@@ -131,12 +118,15 @@ def main():
     encoder_hidden_dim = 300
     decoder_hidden_dim = 600
     use_embedding = True
-    source_vocab_size = 45000
+    source_vocab_size = 49906
+    target_vocab_size = 28442
     mlp_hidden_dim = 100                                # find an apt value from the original torch code
 
     encoder = EncoderLSTM(input_feature_dim, encoder_hidden_dim, use_embedding, source_vocab_size)
+    encoder.embed.weight = nn.Parameter(src_embedding)
+
     attention = AttentionContext(2*encoder_hidden_dim, decoder_hidden_dim)
-    mlp = DecoderMLP(2*encoder_hidden_dim, mlp_hidden_dim)
+    mlp = DecoderMLP(2*encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim, target_vocab_size)
     decoder = DecoderLSTM(encoder_hidden_dim, decoder_hidden_dim)
 
     encoder_learning_rate = 0.01
@@ -187,3 +177,36 @@ def main():
 if __name__ == '__main__':
 
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+def random_data(batch_size):
+    sentences = np.random.randint(1,9,10*batch_size, dtype=int)
+    sentences = sentences.reshape(batch_size,10)
+
+    questions =  np.random.randint(1,5,6*batch_size, dtype=int)
+    questions =  questions.reshape(batch_size,6)
+    #torch.nn.utils.rnn.pack_padded_sequence(input, lengths, batch_first=False)
+    temp = ( Variable( torch.from_numpy(sentences), requires_grad=False),Variable( torch.from_numpy(questions), requires_grad=False) )
+
+    lengths_sentences = [10] * batch_size
+    lengths_questions = [6] * batch_size
+
+    temp1 = pack_padded_sequence( temp[0], lengths_sentences, batch_first=True)
+    temp2 = pack_padded_sequence( temp[1], lengths_questions, batch_first=True)
+
+    return (temp1, temp2)
+
+'''

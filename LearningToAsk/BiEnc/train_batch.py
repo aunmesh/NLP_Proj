@@ -7,19 +7,27 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
+import numpy as np
 
-
-target_vocab_size = 6
+target_vocab_size = 28442
 input_size = 300
-target_embedding = nn.Embedding(target_vocab_size , input_size)  # Make sure this is Glove Embeddings
+target_embed = nn.Embedding(target_vocab_size , input_size, padding_idx=-1)  # Make sure this is Glove Embeddings
 
+tgt_embedding_file = '../Data/source_target_output.npy'
+tgt_embedding = torch.from_numpy(np.load(tgt_embedding_file))
+
+target_embed.weight = nn.Parameter(tgt_embedding )
 
 def get_token_embedding(softmax_vector):
     required_indices = torch.max(softmax_vector,1)[1]
-    return target_embedding( required_indices )
+    return target_embed( required_indices )
 
 
 def get_ground_truth_probab(softmax_vector, question_indices):
+
+    print("DEBUG")
+    print(softmax_vector)
+    print(question_indices)
 
     return softmax_vector.gather(1, question_indices.unsqueeze(1) )
 

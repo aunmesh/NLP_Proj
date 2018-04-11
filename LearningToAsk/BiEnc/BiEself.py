@@ -30,7 +30,7 @@ class EncoderLSTM(nn.Module):
         self.use_embedding = use_embedding
         self.vocab_size = vocab_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True,batch_first = True)
+        self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True, batch_first = True)
 	self.pad_idx = pad_idx
 
         if self.use_embedding :
@@ -53,6 +53,7 @@ class EncoderLSTM(nn.Module):
                                 Shape: [ Batch_Size , 2 self.hidden_size ]
         """
 
+
         print('X size is {}'.format(x.data.size()))
         if isinstance(x, PackedSequence):
             x_embed = x if self.use_embedding is False else PackedSequence(self.embed(x[0]), x[1])
@@ -71,7 +72,7 @@ class EncoderLSTM(nn.Module):
         #c_n_fixed = c_n.transpose(0,1)#.contiguos()
 
         if isinstance(output, PackedSequence):
-            output, output_lengths = pad_packed_sequence(output)    # output : [max_seq_length, batch, 2 * hidden_size]
+            output, output_lengths = pad_packed_sequence(output, batch_first=True)    # output : [max_seq_length, batch, 2 * hidden_size]
 
         else:
             output_lengths = [output.size(1)] * output.size(0)      # [length_of_sequence] * batch_size
