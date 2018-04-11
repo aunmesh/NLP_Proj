@@ -54,22 +54,24 @@ batch_size = 100
 
 
 def pad(tensor, max_length):
-    return torch.cat([tensor, torch.zeros((max_length)-tensor.size(0))])
+    return torch.cat( ( tensor, torch.zeros((max_length)-tensor.size(0)) ) )
 
 
 def sort_batch(src, tgt, src_lengths, tgt_lengths):
 
     sorted_lengths, sorted_idx = src_lengths.sort()    # sort the length of sequence samples
+
     reverse_idx = torch.linspace(batch_size-1, 0, batch_size).long()
 
     sorted_lengths = sorted_lengths[reverse_idx]    # for descending order
     sorted_idx = sorted_idx[reverse_idx]
 
-    src_batch_sorted = [src[i] for i in sorted_idx.data]                 # sorted in descending order
-    tgt_batch_sorted = [tgt[i] for i in sorted_idx.data]
-    tgt_lengths = [tgt_lengths[i] for i in sorted_idx.data]
+    src_batch_sorted = [src[i] for i in sorted_idx]                 # sorted in descending order
+    tgt_batch_sorted = [tgt[i] for i in sorted_idx]
+    tgt_lengths = [tgt_lengths[i] for i in sorted_idx]
 
-    return src_batch_sorted, tgt_batch_sorted, sorted_lengths, tgt_lengths
+
+    return src_batch_sorted, tgt_batch_sorted, list(sorted_lengths), tgt_lengths
 
 
 def generate_batch(batch_size):
@@ -77,7 +79,7 @@ def generate_batch(batch_size):
 
     src_batch_raw = [src_data[i] for i in indices]
     tgt_batch_raw = [tgt_data[i] for i in indices]
-    src_lengths = [len(i) for i in src_batch_raw]
+    src_lengths = torch.from_numpy(np.asarray([len(i) for i in src_batch_raw]))
     tgt_lengths = [len(i) for i in tgt_batch_raw]
 
     src_batch_sorted, tgt_batch_sorted, src_lengths, tgt_lengths = sort_batch(src_batch_raw, tgt_batch_raw, src_lengths, tgt_lengths)
@@ -88,17 +90,21 @@ def generate_batch(batch_size):
     for sentence in src_batch_sorted:
 
         temp_arr = np.asarray(sentence)
-        temp_tensor = torch.from_numpy(temp_arr)
+        temp_tensor = torch.from_numpy(temp_arr).float()
+
         src_batch_padded.append(pad(temp_tensor, max_src_length))
 
     src_batch_padded = Variable( torch.stack(src_batch_padded), requires_grad=False)
-    src_batch_packed = pack_padded_sequence(src_batch_padded, src_lengths)
+
+    src_batch_packed = pack_padded_sequence(src_batch_padded, src_lengths, batch_first=True)
 
     max_tgt_length = max(tgt_lengths)
     tgt_batch_padded = []
     for question in tgt_batch_sorted:
         temp_arr = np.asarray(question)
-        temp_tensor = torch.from_numpy(temp_arr)
+        temp_tensor = torch.from_numpy(temp_arr).float()
+
+
         tgt_batch_padded.append(pad(temp_tensor, max_tgt_length))
 
     tgt_batch_padded = Variable(torch.stack(tgt_batch_padded), requires_grad=False)
@@ -107,7 +113,7 @@ def generate_batch(batch_size):
 
 
 def train_loader(batch_size, num_iterations):
-    for num in num_iterations:
+    for num in range(num_iterations):
         yield generate_batch(batch_size)
 
 
@@ -142,8 +148,10 @@ def main():
     max_output_size = 20
     epochs = 10
 
+    num_iteration = int(data_size / batch_size)
+
     for e in range(0, epochs):
-        for it, batch in enumerate(train_loader(batch_size)):
+        for it, batch in enumerate(train_loader(batch_size, num_iteration)):
             print(e, it, batch)
             loss = train_batch(batch, encoder, decoder, attention, mlp,
                                (encoder_optimizer, decoder_optimizer), max_output_size)
