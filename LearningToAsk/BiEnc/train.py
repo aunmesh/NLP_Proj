@@ -17,22 +17,98 @@ from torch.autograd import Variable
 
 import numpy as np
 
+
 def random_data(batch_size):
-	sentences = np.random.randint(1,9,10*batch_size, dtype=int)
-	sentences = sentences.reshape(batch_size,10)
+    sentences = np.random.randint(1,9,10*batch_size, dtype=int)
+    sentences = sentences.reshape(batch_size,10)
 
-	questions =  np.random.randint(1,5,6*batch_size, dtype=int)
-	questions =  questions.reshape(batch_size,6)
-	#torch.nn.utils.rnn.pack_padded_sequence(input, lengths, batch_first=False)
-	temp = ( Variable( torch.from_numpy(sentences), requires_grad=False),Variable( torch.from_numpy(questions), requires_grad=False) )
-	
-	lengths_sentences = [10] * batch_size
-	lengths_questions = [6] * batch_size
+    questions =  np.random.randint(1,5,6*batch_size, dtype=int)
+    questions =  questions.reshape(batch_size,6)
+    #torch.nn.utils.rnn.pack_padded_sequence(input, lengths, batch_first=False)
+    temp = ( Variable( torch.from_numpy(sentences), requires_grad=False),Variable( torch.from_numpy(questions), requires_grad=False) )
 
-	temp1 = pack_padded_sequence( temp[0], lengths_sentences, batch_first=True)
-	temp2 = pack_padded_sequence( temp[1], lengths_questions, batch_first=True)
+    lengths_sentences = [10] * batch_size
+    lengths_questions = [6] * batch_size
 
-	return ( temp1, temp2 )
+    temp1 = pack_padded_sequence( temp[0], lengths_sentences, batch_first=True)
+    temp2 = pack_padded_sequence( temp[1], lengths_questions, batch_first=True)
+
+    return (temp1, temp2)
+
+
+def load_data(filename):
+    data = []
+    file_handle = open(filename, 'r')
+    for line in file_handle:
+        line = line.strip()
+        line = line.split()
+        line = [int(i) for i in line]
+        data.append(line)
+    file_handle.close()
+    return data
+
+src_data = load_data('../Data/src_data_train.txt')
+tgt_data = load_data('../Data/tgt_data_train.txt')
+data_size = len(src_data)
+batch_size = 100
+
+
+def pad(tensor, max_length):
+    return torch.cat([tensor, torch.zeros((max_length)-tensor.size(0))])
+
+
+def sort_batch(src, tgt, src_lengths, tgt_lengths):
+
+    sorted_lengths, sorted_idx = src_lengths.sort()    # sort the length of sequence samples
+    reverse_idx = torch.linspace(batch_size-1, 0, batch_size).long()
+
+    sorted_lengths = sorted_lengths[reverse_idx]    # for descending order
+    sorted_idx = sorted_idx[reverse_idx]
+
+    src_batch_sorted = [src[i] for i in sorted_idx.data]                 # sorted in descending order
+    tgt_batch_sorted = [tgt[i] for i in sorted_idx.data]
+    tgt_lengths = [tgt_lengths[i] for i in sorted_idx.data]
+
+    return src_batch_sorted, tgt_batch_sorted, sorted_lengths, tgt_lengths
+
+
+def generate_batch(batch_size):
+    indices = np.random.randint(0,data_size, batch_size)
+
+    src_batch_raw = [src_data[i] for i in indices]
+    tgt_batch_raw = [tgt_data[i] for i in indices]
+    src_lengths = [len(i) for i in src_batch_raw]
+    tgt_lengths = [len(i) for i in tgt_batch_raw]
+
+    src_batch_sorted, tgt_batch_sorted, src_lengths, tgt_lengths = sort_batch(src_batch_raw, tgt_batch_raw, src_lengths, tgt_lengths)
+
+    max_src_length = max(src_lengths)
+    src_batch_padded = []
+
+    for sentence in src_batch_sorted:
+
+        temp_arr = np.asarray(sentence)
+        temp_tensor = torch.from_numpy(temp_arr)
+        src_batch_padded.append(pad(temp_tensor, max_src_length))
+
+    src_batch_padded = Variable( torch.stack(src_batch_padded), requires_grad=False)
+    src_batch_packed = pack_padded_sequence(src_batch_padded, src_lengths)
+
+    max_tgt_length = max(tgt_lengths)
+    tgt_batch_padded = []
+    for question in tgt_batch_sorted:
+        temp_arr = np.asarray(question)
+        temp_tensor = torch.from_numpy(temp_arr)
+        tgt_batch_padded.append(pad(temp_tensor, max_tgt_length))
+
+    tgt_batch_padded = Variable(torch.stack(tgt_batch_padded), requires_grad=False)
+
+    return src_batch_packed, (tgt_batch_padded, tgt_lengths)
+
+
+def train_loader(batch_size, num_iterations):
+    for num in num_iterations:
+        yield generate_batch(batch_size)
 
 
 def main():
@@ -63,19 +139,12 @@ def main():
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=encoder_learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=decoder_learning_rate)
 
-    dataset_size = 50000                                # Not the actual value
-    batch_size = 10
-	
-
-    train_loader = [random_data(batch_size) for b in range(10) ]                                 # define a dataset loader
-
     max_output_size = 20
     epochs = 10
-    num_iterations = dataset_size / batch_size
 
     for e in range(0, epochs):
-        for it, batch in enumerate(train_loader):
-            print(e,it,batch)
+        for it, batch in enumerate(train_loader(batch_size)):
+            print(e, it, batch)
             loss = train_batch(batch, encoder, decoder, attention, mlp,
                                (encoder_optimizer, decoder_optimizer), max_output_size)
 

@@ -3,13 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from sklearn.feature_extraction.text import CountVectorizer
 import json
-
-from six.moves import xrange
-from six.moves import zip
-from six.moves import cPickle
-
-
 import numpy as np
+from sets import Set
+import re
 
 
 TRANSLATE = {
@@ -28,34 +24,29 @@ TRANSLATE = {
 }
 
 
-# def parse_args(description = "I am lazy"):
-#     import argparse
-#     parser = argparse.ArgumentParser(description = description)
-#     parser.add_argument("--embedding", type = str, default = "./glove/glove.6B.100d.txt", required = True)
-#     parser.add_argument("--dict", type = str, required = True)
-#     parser.add_argument("--output", type = str, required = True)
-#     parser.add_argument("--seed", type = int, default = 19941023)
-#     args = parser.parse_args()
-#     np.random.seed(args.seed)
-#     return args
-
-
 def main():
-    # args = parse_args()
 
     word2embedding = {}
-    dimension = None
-    with open("./glove/glove.6B.100d.txt", "r") as input_file:
+    # token_pattern = re.compile(r"\w+")
+    token_pattern = re.compile(r"[a-zA-Z]+")
+
+    with open("./glove/glove.6B.300d.txt", "r") as input_file:
         for line in input_file:
             line = line.split()
             word2embedding[line[0]] = np.asarray(map(float, line[1 : ]))
             dimension = len(line) - 1
 
+    words = Set()
     with open("src-train.txt", "r") as input_file:
-        words = [ line.split()[0] for line in input_file ]
+        for line in input_file:
+            tokens = token_pattern.findall(line)
+            for token in tokens:
+                words.add(token)
 
-    embedding = np.random.uniform(low = -1.0 / 3, high = 1.0 / 3, size = (len(words), dimension))
-    embedding = np.asarray(embedding, dtype = np.float32)
+    embedding = np.random.uniform(low=-1.0 / 3, high=1.0 / 3, size=(len(words), dimension))
+    embedding = np.asarray(embedding, dtype=np.float32)
+
+    f = open("src_vocab.txt", "w")
     unknown_count = 0
     for i, word in enumerate(words):
         if word in TRANSLATE:
@@ -63,6 +54,8 @@ def main():
         done = False
         for w in (word, word.upper(), word.lower()):
             if w in word2embedding:
+                f.write(w)
+                f.write('\n')
                 embedding[i] = word2embedding[w]
                 done = True
                 break
@@ -70,22 +63,23 @@ def main():
             print("Unknown word: %s" % (word, ))
             unknown_count += 1
 
-    # vectorizer = CountVectorizer(token_pattern='(?u)\\b\\w+\\b')
-    vectorizer = CountVectorizer()
-    data = vectorizer.fit_transform(words)
-    dict_vocab = json.dumps(vectorizer.vocabulary_)
-    f = open("data_train_src.json", "w")
-    f.write(dict_vocab)
     f.close()
+
     np.save("source_train_output", embedding)
     print("Total unknown: %d" % (unknown_count, ))
 
-
+    words = Set()
     with open("tgt-train.txt", "r") as input_file:
-        words = [line.split()[0] for line in input_file]
+        for line in input_file:
+            tokens = token_pattern.findall(line)
+            for token in tokens:
+                words.add(token)
 
     embedding = np.random.uniform(low=-1.0 / 3, high=1.0 / 3, size=(len(words), dimension))
     embedding = np.asarray(embedding, dtype=np.float32)
+
+    f = open("tgt_vocab.txt", "w")
+
     unknown_count = 0
     for i, word in enumerate(words):
         if word in TRANSLATE:
@@ -93,6 +87,8 @@ def main():
         done = False
         for w in (word, word.upper(), word.lower()):
             if w in word2embedding:
+                f.write(w)
+                f.write('\n')
                 embedding[i] = word2embedding[w]
                 done = True
                 break
@@ -100,45 +96,62 @@ def main():
             print("Unknown word: %s" % (word,))
             unknown_count += 1
 
-    vectorizer = CountVectorizer()
-    data = vectorizer.fit_transform(words)
-
-    dict_vocab = json.dumps(vectorizer.vocabulary_)
-    f = open("data_train_tgt.json", "w")
-    f.write(dict_vocab)
     f.close()
-
     np.save("source_target_output", embedding)
     print("Total unknown: %d" % (unknown_count,))
 
-
+    src_vocab = {}
+    f = open("src_vocab.txt", "r")
+    for i, line in enumerate(f):
+        src_vocab[line.strip()] = i
+    f.close()
 
     src_index_train = []
 
-    src_vocab = json.load(open('data_train_src.json'))
-
     with open("src-train.txt", "r") as input_file:
         for i, line in enumerate(input_file):
-            words = line.split()[0]
+            words = token_pattern.findall(line)
             temp = []
-            for word in words:
-                if len(word) > 1:
-                    temp.append(src_vocab[word])
+            for j, word in enumerate(words):
+                try:
+                    temp.append(str(src_vocab[word]))
+                except:
+                    temp.append(str(-1))
             src_index_train.append(temp)
-    np.save("src_index_train" , np.array(src_index_train))
+
+    f = open("src_data_train.txt", "w")
+    for sentence in src_index_train:
+        line = " ".join(sentence)
+        f.write(line)
+        f.write('\n')
+    f.close()
+
+    tgt_vocab = {}
+    f = open("tgt_vocab.txt", "r")
+    for i, line in enumerate(f):
+        tgt_vocab[line.strip()] = i
+    f.close()
 
     tgt_index_train = []
-    tgt_vocab = json.load(open('data_train_tgt.json'))
 
     with open("tgt-train.txt", "r") as input_file:
         for i, line in enumerate(input_file):
-            words = line.split()[0]
+            words = token_pattern.findall(line)
             temp = []
-            for word in words:
-                if len(word) > 1:
-                    temp.append(tgt_vocab[word])
+            for j, word in enumerate(words):
+                try:
+                    temp.append(str(tgt_vocab[word]))
+                except:
+                    temp.append(str(-1))
             tgt_index_train.append(temp)
-    np.save("tgt_index_train" , np.array(tgt_index_train))
+
+    f = open("tgt_data_train.txt", "w")
+    for sentence in tgt_index_train:
+        line = " ".join(sentence)
+        f.write(line)
+        f.write('\n')
+    f.close()
+
 
 if __name__ == "__main__":
     main()

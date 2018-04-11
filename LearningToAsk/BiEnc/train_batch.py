@@ -41,11 +41,13 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
 
     source_batch_indices = batch[0]                 # a packed Sequence as Source passages can be of different lengths
     
-    question_batch_indices = batch[1]               # a packed Sequence as Target passages can be of different lengths
- 
-    question_indices_batch, question_lengths = pad_packed_sequence( question_batch_indices, batch_first = True, padding_value=0 ) # output is of size [Max_seq_length , batch , 2 * hidden_size]
+    # question_batch_indices = batch[1]               # a packed Sequence as Target passages can be of different lengths
+    # question_indices_batch, question_lengths = pad_packed_sequence(question_batch_indices, batch_first=True, padding_value=0) # output is of size [Max_seq_length , batch , 2 * hidden_size]
 
-    batch_size = len( question_lengths )
+    question_indices_batch = batch[1][0]
+    question_lengths = batch[1][1]
+
+    batch_size = len(question_lengths)
 
     # Ignoring initial Encoder states for now, encoder_output : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
