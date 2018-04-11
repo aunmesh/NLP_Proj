@@ -43,25 +43,40 @@ def main():
             for token in tokens:
                 words.add(token)
 
+    words = ['<UNK>', '<SOS>', '<EOS>'] + list(words)
     embedding = np.random.uniform(low=-1.0 / 3, high=1.0 / 3, size=(len(words), dimension))
     embedding = np.asarray(embedding, dtype=np.float32)
 
     f = open("src_vocab.txt", "w")
     unknown_count = 0
+	
     for i, word in enumerate(words):
-        if word in TRANSLATE:
-            word = TRANSLATE[word]
-        done = False
-        for w in (word, word.upper(), word.lower()):
-            if w in word2embedding:
-                f.write(w)
-                f.write('\n')
-                embedding[i] = word2embedding[w]
-                done = True
-                break
-        if not done:
-            print("Unknown word: %s" % (word, ))
-            unknown_count += 1
+	if i==0:						# represents <UNK> tag
+            f.write(w)
+	    f.write('\n')
+            embedding[i] = np.asarray(map(float, [0]*dimension))
+	elif i==1:						# represents <SOS> tag
+            f.write(w)
+	    f.write('\n')	
+            embedding[i] = np.asarray(map(float, [-1]*dimension))
+	elif i==2:						# represents <EOS> tag
+            f.write(w)
+	    f.write('\n')
+            embedding[i] = np.asarray(map(float, [-2]*dimension))
+	else:		
+	    if word in TRANSLATE:
+	        word = TRANSLATE[word]
+    	    done = False
+	    for w in (word, word.upper(), word.lower()):
+	        if w in word2embedding:
+		    f.write(w)
+		    f.write('\n')
+		    embedding[i] = word2embedding[w]
+		    done = True
+		    break
+	    if not done:
+	        print("Unknown word: %s" % (word, ))
+	        unknown_count += 1
 
     f.close()
 
@@ -74,27 +89,40 @@ def main():
             tokens = token_pattern.findall(line)
             for token in tokens:
                 words.add(token)
-
+   
+    words = ['<UNK>', '<SOS>', '<EOS>'] + list(words)
     embedding = np.random.uniform(low=-1.0 / 3, high=1.0 / 3, size=(len(words), dimension))
     embedding = np.asarray(embedding, dtype=np.float32)
 
     f = open("tgt_vocab.txt", "w")
-
     unknown_count = 0
     for i, word in enumerate(words):
-        if word in TRANSLATE:
-            word = TRANSLATE[word]
-        done = False
-        for w in (word, word.upper(), word.lower()):
-            if w in word2embedding:
-                f.write(w)
-                f.write('\n')
-                embedding[i] = word2embedding[w]
-                done = True
-                break
-        if not done:
-            print("Unknown word: %s" % (word,))
-            unknown_count += 1
+        if i==0:						# represents <UNK> tag
+            f.write(w)
+	    f.write('\n')
+            embedding[i] = np.asarray(map(float, [0]*dimension))
+	elif i==1:						# represents <SOS> tag
+            f.write(w)
+	    f.write('\n')	
+            embedding[i] = np.asarray(map(float, [-1]*dimension))
+	elif i==2:						# represents <EOS> tag
+            f.write(w)
+	    f.write('\n')
+            embedding[i] = np.asarray(map(float, [-2]*dimension))
+	else:	
+            if word in TRANSLATE:
+                word = TRANSLATE[word]
+            done = False
+            for w in (word, word.upper(), word.lower()):
+                if w in word2embedding:
+                    f.write(w)
+                    f.write('\n')
+                    embedding[i] = word2embedding[w]
+                    done = True
+                    break
+            if not done:
+                print("Unknown word: %s" % (word,))
+                unknown_count += 1
 
     f.close()
     np.save("source_target_output", embedding)
@@ -112,11 +140,13 @@ def main():
         for i, line in enumerate(input_file):
             words = token_pattern.findall(line)
             temp = []
+            temp.append(str(1))				# represents <SOS> tag
             for j, word in enumerate(words):
                 try:
                     temp.append(str(src_vocab[word]))
                 except:
-                    temp.append(str(-1))
+                    temp.append(str(0))			# represents <UNK> tag
+            temp.append(str(2))				# represents <EOS> tag
             src_index_train.append(temp)
 
     f = open("src_data_train.txt", "w")
@@ -138,11 +168,13 @@ def main():
         for i, line in enumerate(input_file):
             words = token_pattern.findall(line)
             temp = []
+            temp.append(str(1))				# represents <SOS> tag
             for j, word in enumerate(words):
                 try:
                     temp.append(str(tgt_vocab[word]))
                 except:
-                    temp.append(str(-1))
+                    temp.append(str(0))			# represents <UNK> tag
+            temp.append(str(2))				# represents <EOS> tag
             tgt_index_train.append(temp)
 
     f = open("tgt_data_train.txt", "w")

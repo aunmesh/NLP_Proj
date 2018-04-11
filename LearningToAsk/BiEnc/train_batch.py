@@ -18,9 +18,12 @@ tgt_embedding = torch.from_numpy(np.load(tgt_embedding_file))
 
 target_embed.weight = nn.Parameter(tgt_embedding )
 
-def get_token_embedding(softmax_vector):
+def get_next_token_indices(softmax_vector):
     required_indices = torch.max(softmax_vector,1)[1]
-    return target_embed( required_indices )
+    return required_indices
+
+def get_embedding(indices):
+    return target_embed( indices )
 
 
 def get_ground_truth_probab(softmax_vector, question_indices):
@@ -74,20 +77,21 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     
     decoder_prev_state = (dh_0, dc_0)
     #prev_token = None                              # DEFINE: <SOS>token embedding
-    prev_token = Variable(torch.randn(batch_size,1,300))
+    prev_token = Variable(-1* torch.ones(batch_size,1,300))	# Definition matches with <SOS> embedding defined in data
 
+    prev_token = get_embedding(question_indices_batch[:, 0]).unsqueeze(1)
 
     # Final Size : [Batch_Size, Max_Seq_Length]
     total__probab__tensor = Variable(torch.ones((batch_size, 1)))
     dummy = 0
-    for step in range(max_output_size):
+    for step in range(1, max_output_size):
 
         decoder_next_output, decoder_next_state = decoder(prev_token, decoder_prev_state)
         context_vec , __ = attention(encoder_output, decoder_next_output, mask_source)
 
         # softmax_vector : [ Batch_Size , Target_Vocab_Size ]
         softmax_vector = mlp(decoder_next_output, context_vec)
-        next_token = get_token_embedding(softmax_vector)
+        next_token = get_embedding( get_next_token_indices(softmax_vector) )
 
         # In the Loss Calculation We only need the probability of the actual Ground truth. Note
 
