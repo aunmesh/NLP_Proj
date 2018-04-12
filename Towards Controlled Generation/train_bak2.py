@@ -5,6 +5,7 @@ from keras.datasets import imdb
 import torch
 from torch.autograd import Variable
 from torch.optim import Adam
+import pickle as pk
 from  discriminator import Discriminator
 # import Model
 # import Model.as Constants
@@ -23,7 +24,7 @@ EOS_WORD = '</s>'
 
 epoch = 20
 max_features = 10000
-maxlen = 10
+maxlen = 20
 discriminator = Discriminator(10000)
 batch_size = 64
 criterion = torch.nn.CrossEntropyLoss()
@@ -48,7 +49,6 @@ backward_dict = {}
 for key, value in forward_dict.items():
     backward_dict[value] = key
 
-# Input is a sequence of sentences. The pad_sequences ensures each question is same length by padding short questions. The maximum length is constrained to be maxlen.
 x_train = sequence.pad_sequences(
         x_train,
         maxlen=maxlen,
@@ -63,8 +63,33 @@ x_test = sequence.pad_sequences(
         truncating='post',
         value=PAD,
         )
-print("x_train shape ", x_train.shape)
-print("x_test shape ", x_test.shape)
+
+def loadGloveModel(gloveFile):
+    print("Loading Glove Model")
+    f = open(gloveFile,'r')
+    model = {}
+    for line in f:
+        splitLine = line.split()
+        word = splitLine[0]
+        embedding = np.array([float(val) for val in splitLine[1:]])
+        model[word] = embedding
+    print("Done.",len(model)," words loaded!")
+    f = open("glove_model.pkl","wb")
+    pk.dump(model,f)
+    return model
+
+def loadModel(flag = False):
+    print("loadModel start")
+    if flag:
+        model = loadGloveModel("GloVe-1.2/glove.6B.100d.txt")
+    else:
+        f = open("glove_model.pkl", 'rb')
+        model  = pk.load(f)
+    print("loadModel end")
+
+    return model
+
+
 
 def get_batch(data, index, batch_size, testing=False):
     tensor = torch.from_numpy(data[index:index+batch_size]).type(torch.LongTensor)
@@ -72,15 +97,11 @@ def get_batch(data, index, batch_size, testing=False):
     output_data = input_data
     return input_data, output_data
 
-# This gets the questions from data[index] to data[index+batch_size].
-# Essentially, fetches a batch of data and it's labels
 def get_batch_label(data, label, index, batch_size, testing=False):
     tensor = torch.from_numpy(data[index:index+batch_size]).type(torch.LongTensor)
     input_data = Variable(tensor, volatile=testing, requires_grad=False)
     label_tensor = torch.from_numpy(label[index:index+batch_size]).type(torch.LongTensor)
     output_data = Variable(label_tensor, volatile=testing, requires_grad=False)
-    print("input data shape ", input_data.shape)
-    print("output data shape ", output_data.shape)
     return input_data, output_data
 
 # Borrow from https://github.com/ethanluoyc/pytorch-vae/blob/master/vae.py
@@ -95,7 +116,7 @@ d_opt = Adam(discriminator.parameters())
 
 def train_discriminator(discriminator):
     # TODO: empirical Shannon entropy
-    print_epoch = 0
+    print_epoch = 9
     for epoch_index in range(epoch):
         for batch, index in enumerate(range(0, len(x_train) - 1, batch_size)):
             discriminator.train()
@@ -119,14 +140,16 @@ def train_discriminator(discriminator):
                     batch,
                     loss.data[0],
                     ))
-            if print_epoch == epoch_index and print_epoch:
-                discriminator.eval()
-                print_epoch = epoch_index + 1
-                input_data, output_data = get_batch_label(x_test, y_test, 0, len(y_test), testing=True)
-                _, predicted = torch.max(discriminator(input_data).data, 1)
-                correct = (predicted == torch.from_numpy(y_test)).sum()
-                print("[Discriminator] Test accuracy {} %".format(
-                    100 * correct / len(y_test)
-                    ))
+            # if True or (print_epoch == epoch_index and print_epoch):
+        discriminator.eval()
+        print_epoch = epoch_index + 1
+        input_data, output_data = get_batch_label(x_test, y_test, 0, len(y_test), testing=True)
+        _, predicted = torch.max(discriminator(input_data).data, 1)
+        correct = (predicted == torch.from_numpy(y_test)).sum()
+        print("[Discriminator] Test accuracy {} %".format(
+            100 * correct / len(y_test)
+            ))
 
-train_discriminator(discriminator)
+
+# glove = loadModel(True)
+model = train_discriminator(discriminator)
