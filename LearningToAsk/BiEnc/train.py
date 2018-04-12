@@ -26,7 +26,7 @@ def load_data(filename):
     for line in file_handle:
         line = line.strip()
         line = line.split()
-        line = [int(i) + 1 for i in line]   #Temporary fix for indices
+        line = [int(i) for i in line]
         data.append(line)
     file_handle.close()
     return data
@@ -34,7 +34,7 @@ def load_data(filename):
 src_data = load_data('../Data/src_data_train.txt')
 tgt_data = load_data('../Data/tgt_data_train.txt')
 data_size = len(src_data)
-batch_size = 100
+batch_size = 64
 
 src_embedding_file = '../Data/source_train_output.npy'
 src_embedding = torch.from_numpy(np.load(src_embedding_file))
@@ -120,7 +120,7 @@ def main():
     use_embedding = True
     source_vocab_size = 49906
     target_vocab_size = 28442
-    mlp_hidden_dim = 100                                # find an apt value from the original torch code
+    mlp_hidden_dim = 50                                # find an apt value from the original torch code
 
     encoder = EncoderLSTM(input_feature_dim, encoder_hidden_dim, use_embedding, source_vocab_size)
     encoder.embed.weight = nn.Parameter(src_embedding)
@@ -143,12 +143,22 @@ def main():
 
     for e in range(0, epochs):
         for it, batch in enumerate(train_loader(batch_size, num_iteration)):
-            print(e, it)
+            #print(e, it)
             loss = train_batch(batch, encoder, decoder, attention, mlp,
                                (encoder_optimizer, decoder_optimizer), max_output_size)
 
-            if it % 10 == 0:
-                print(e, it, loss)
+            if it % 5 == 0:
+		print("Epoch " +str(e) + " iteration " + str(it) + " Loss " + str(loss) )
+                #print(e, it, loss)
+	if e % 4 == 0:
+	   	  print("Saving Encoder")
+	   	  torch.save(encoder.state_dict(), 'Encoder_epoch_' + str(e)+ '.pt')
+	   	  print("Saving DecoderLSTM")
+	   	  torch.save(decoder.state_dict(), 'DecoderLSTM_epoch_' + str(e)+ '.pt')
+	   	  print("Saving DecoderMLP")
+	   	  torch.save(mlp.state_dict(), 'DecoderMLP_epoch_' + str(e)+ '.pt')
+	   	  print("Saving Attention Model")
+	   	  torch.save(attention.state_dict(), 'Attention_epoch_' + str(e)+ '.pt')
 
     # Describe loss function
     # Describe optimizer

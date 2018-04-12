@@ -59,7 +59,6 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     # Ignoring initial Encoder states for now, encoder_output : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
     encoder_output, encoder_output_len, encoder_states, mask_source = encoder(source_batch_indices)
-
     encoder_hidden_states = encoder_states[0]       # [batch, num_layers * num_directions, hidden_size]
     
     encoder_cell_states = encoder_states[1]
@@ -110,7 +109,7 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     loss = 0
 
     for o,l in zip( total__probab__tensor, question_lengths ):
-        temp = torch.log(o[:l])
+        temp = -1*torch.log(o[:l])
         
         normalizing_factor = l * batch_size
         temp_sum = torch.sum(temp) / normalizing_factor
