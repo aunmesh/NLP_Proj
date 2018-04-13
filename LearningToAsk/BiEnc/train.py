@@ -18,6 +18,8 @@ from torch.autograd import Variable
 import numpy as np
 
 
+print("Hi there")
+print(torch.__version__)
 
 
 def load_data(filename):
