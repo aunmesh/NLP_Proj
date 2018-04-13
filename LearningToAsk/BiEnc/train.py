@@ -18,10 +18,6 @@ from torch.autograd import Variable
 import numpy as np
 
 
-print("Hi there")
-print(torch.__version__)
-
-
 def load_data(filename):
     data = []
     file_handle = open(filename, 'r')
@@ -120,8 +116,8 @@ def main():
     encoder_hidden_dim = 300
     decoder_hidden_dim = 600
     use_embedding = True
-    source_vocab_size = 49906
-    target_vocab_size = 28442
+    source_vocab_size = 49909
+    target_vocab_size = 28445
     mlp_hidden_dim = 50                                # find an apt value from the original torch code
 
     encoder = EncoderLSTM(input_feature_dim, encoder_hidden_dim, use_embedding, source_vocab_size)
