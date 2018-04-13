@@ -9,6 +9,8 @@ import pickle as pk
 from  discriminator2 import Discriminator
 import gensim
 from gensim.scripts.glove2word2vec import glove2word2vec
+import nltk
+from nltk.corpus import stopwords
 # import Model
 # import Model.as Constants
 # from Model.Modules import Encoder, Generator, Discriminator
@@ -24,6 +26,7 @@ UNK_WORD = '<unk>'
 BOS_WORD = '<s>'
 EOS_WORD = '</s>'
 
+
 epoch = 10
 max_features = 10000
 maxlen = 750
@@ -31,6 +34,7 @@ discriminator = Discriminator(10000, maxlen = 15)
 batch_size = 128
 criterion = torch.nn.CrossEntropyLoss()
 
+stop_words = set(stopwords.words('english'))
 # print('Loading data...')
 # (x_train, y_train), (x_test, x_test[1]) = imdb.load_data(
 #         num_words=max_features,
@@ -65,6 +69,15 @@ print("loading glove model")
 glove = gensim.models.KeyedVectors.load_word2vec_format('GloVe-1.2/glove.6B.50d.txt.word2vec', binary= False )
 print("loading complete")
 
+classes = {
+            "what" : 0,
+            "how" : 1,
+            "why" : 2,
+            "when" : 3,
+            "where" : 4,
+            "who" : 5,
+            "which" : 6
+        }
 
 
 def loadData(dataFile, labelFile):
