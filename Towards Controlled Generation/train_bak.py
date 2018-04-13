@@ -24,7 +24,7 @@ UNK_WORD = '<unk>'
 BOS_WORD = '<s>'
 EOS_WORD = '</s>'
 
-epoch = 20
+epoch = 10
 max_features = 10000
 maxlen = 750
 discriminator = Discriminator(10000, maxlen = 15)
@@ -51,7 +51,15 @@ criterion = torch.nn.CrossEntropyLoss()
 # for key, value in forward_dict.items():
 #     backward_dict[value] = key
 
-
+classes = {
+        "what":0,
+        "how": 1,
+        "why" :2,
+        "when":3,
+        "where":4,
+        "who":5,
+        "which":6
+        }
 # glove2word2vec('GloVe-1.2/glove.6B.50d.txt', 'GloVe-1.2/glove.6B.50d.txt.word2vec')
 print("loading glove model")
 glove = gensim.models.KeyedVectors.load_word2vec_format('GloVe-1.2/glove.6B.50d.txt.word2vec', binary= False )
@@ -68,7 +76,9 @@ def loadData(dataFile, labelFile):
                 # wordVector = np.array(len(),750)
                 num_words = 0
                 for word in line.split():
-                    if word in glove:
+                    if word in classes.keys():
+                        continue
+                    elif word in glove:
                         wordVector.append(glove[word])
                     else:
                         wordVector.append(glove["unk"])
@@ -139,19 +149,16 @@ def train_discriminator(discriminator):
             # print("batch is ", batch, "index is ", index)
             discriminator.train()
             input_data, output_data = get_batch_label(
-                    x_train[0],
-                    x_train[1],
-                    index,
-                    batch_size
-                    )
-
+                                    x_train[0],
+                                    x_train[1],
+                                    index,
+                                    batch_size
+                                    )
             discriminator.zero_grad()
-
-            output = discriminator(input_data, dont_pass_emb=True)
+            output = discriminator(input_data, is_softmax=True, dont_pass_emb=True)
             loss = criterion(output, output_data)
             loss.backward()
             d_opt.step()
-
             if batch % 50 == 0:
                 print("[Discriminator] Epoch {} batch {}'s loss: {}".format(
                     epoch_index,
@@ -169,4 +176,58 @@ def train_discriminator(discriminator):
             ))
 
 
+outs = []
+temp = []
+offsets = []
+gd = []
+ctemp = []
+coffsets = []
+cgd = []
+def testfn(discriminator):
+    backward_dict = {}
+    for key, value in classes.items():
+        backward_dict[value] = key
+
+    for batch, index in enumerate(range(0, len(x_test[0]) - 1, batch_size)):
+        # print("batch is ", batch, "index is ", index)
+        input_data, output_data = get_batch_label(
+                x_test[0],
+                x_test[1],
+                index,
+                batch_size)
+        output = discriminator(input_data, is_softmax=True, dont_pass_emb=True)
+        prob, predicted = torch.max(output.data, 1)
+        for x in range(len(output)):
+            if predicted[x]!=output_data.data[x]:
+                # Error on this point!
+                offset = batch*batch_size + x + 1
+                offsets.append(int(offset))
+                temp.append(np.asarray(torch.exp(output[x]).data))
+                gd.append(np.asarray([int(predicted[x]), int(output_data.data[x])]))
+                # outstr=(str(offset) + " error. Output :" + str(backward_dict[predicted[x]]) + " True:" + str(backward_dict[output_data.data[x]]) + " prob: " + str(torch.exp(output[x]).data) + "\n")
+            else:
+                # No error on this point!
+                coffset = batch*batch_size + x + 1
+                coffsets.append(int(coffset))
+                ctemp.append(np.asarray(torch.exp(output[x]).data))
+                cgd.append(np.asarray([int(predicted[x]), int(output_data.data[x])]))
+        # outs.append(outstr)
+
 model = train_discriminator(discriminator)
+testfn(discriminator)
+
+# temp = []
+# for o in outs:
+#     a = o.split('\n')
+#     temp.append(a[1:8])
+fo = open('err_offs.txt', 'w')
+fv = open('err_vecs.txt', 'w')
+fg = open('err_gd.txt', 'w')
+np.savetxt('err_vecs.txt', temp)
+np.savetxt('err_offs.txt', offsets)
+np.savetxt('err_gd.txt', gd)
+
+
+np.savetxt('correct_vecs.txt', ctemp)
+np.savetxt('correct_offs.txt', coffsets)
+np.savetxt('correct_gd.txt', cgd)
