@@ -84,7 +84,7 @@ class EncoderLSTM(nn.Module):
         #output_t = output.transpose(0,1)
 	
 	temp = max(output_lengths)
-	mask = Variable(torch.zeros( output.size(0), temp), requires_grad=False)
+	mask = Variable(torch.zeros( output.size(0), temp), requires_grad=False).cuda()
 
 	for ind,val in enumerate(output_lengths):
 		mask[ind,:val] = 1

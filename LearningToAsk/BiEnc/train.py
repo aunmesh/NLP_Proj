@@ -81,7 +81,7 @@ def generate_batch(batch_size):
 
         src_batch_padded.append(pad(temp_tensor, max_src_length))
 
-    src_batch_padded = Variable( torch.stack(src_batch_padded), requires_grad=False)
+    src_batch_padded = Variable( torch.stack(src_batch_padded), requires_grad=False).cuda()
 
     src_batch_packed = pack_padded_sequence(src_batch_padded, src_lengths, batch_first=True)
 
@@ -129,36 +129,59 @@ def main():
     mlp = DecoderMLP(2*encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim, target_vocab_size)
     decoder = DecoderLSTM(encoder_hidden_dim, decoder_hidden_dim)
 
-    encoder_learning_rate = 0.01
-    decoder_learning_rate = 0.01
 
-    encoder_optimizer = optim.SGD(encoder.parameters(), lr=encoder_learning_rate)
-    decoder_optimizer = optim.SGD(decoder.parameters(), lr=decoder_learning_rate)
+    encoder = encoder.cuda()
+    decoder = decoder.cuda()
+    attention = attention.cuda()
+    mlp = mlp.cuda()
+
+    #encoder_learning_rate = 1.0
+    #decoder_learning_rate = 1.0
+
+    learning_rate = 1.0
+    #encoder_optimizer = optim.SGD(encoder.parameters(), lr=encoder_learning_rate)
+    #decoder_optimizer = optim.SGD(decoder.parameters(), lr=decoder_learning_rate)
+    #mlp_optimizer = optim.SGD(mlp.parameters(), lr=decoder_learning_rate)
+    #attention_optimizer = optim.SGD(attention.parameters(), lr=decoder_learning_rate)
+
+    params = list(encoder.parameters()) + list(decoder.parameters()) + list(mlp.parameters()) + list(attention.parameters())
+    main_optimizer = optim.SGD(params, lr = learning_rate)
 
     max_output_size = 20
     epochs = 10
 
     num_iteration = int(data_size / batch_size)
 
+    log = [("epoch","iteration","loss")]
 
     for e in range(0, epochs):
         for it, batch in enumerate(train_loader(batch_size, num_iteration)):
             #print(e, it)
             loss = train_batch(batch, encoder, decoder, attention, mlp,
-                               (encoder_optimizer, decoder_optimizer), max_output_size)
+                               main_optimizer, max_output_size)
 
-            if it % 5 == 0:
-		print("Epoch " +str(e) + " iteration " + str(it) + " Loss " + str(loss) )
+            if it % 6 == 0:
+		print("Epoch " +str(e) + " iteration " + str(it) + " Loss " + str(loss.data) )
+                log.append((e,it,loss))
                 #print(e, it, loss)
+
+            if it%100 == 0:
+                file_log = open("log.txt",'a')
+                for entry in log:
+                    file_log.write( str(entry[0]) + " " + str(entry[1]) + " " + str(entry[2]) + "\n")
+                file_log.close()
+                log = []
+
 	if e % 4 == 0:
 	   	  print("Saving Encoder")
-	   	  torch.save(encoder.state_dict(), 'Encoder_epoch_' + str(e)+ '.pt')
+	   	  torch.save(encoder.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/Encoder_epoch_' + str(e)+ '.pt')
 	   	  print("Saving DecoderLSTM")
-	   	  torch.save(decoder.state_dict(), 'DecoderLSTM_epoch_' + str(e)+ '.pt')
+	   	  torch.save(decoder.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/DecoderLSTM_epoch_' + str(e)+ '.pt')
 	   	  print("Saving DecoderMLP")
-	   	  torch.save(mlp.state_dict(), 'DecoderMLP_epoch_' + str(e)+ '.pt')
+	   	  torch.save(mlp.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/DecoderMLP_epoch_' + str(e)+ '.pt')
 	   	  print("Saving Attention Model")
-	   	  torch.save(attention.state_dict(), 'Attention_epoch_' + str(e)+ '.pt')
+	   	  torch.save(attention.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/Attention_epoch_' + str(e)+ '.pt')
+
 
     # Describe loss function
     # Describe optimizer

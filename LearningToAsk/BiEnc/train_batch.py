@@ -11,10 +11,10 @@ import numpy as np
 
 target_vocab_size = 28442
 input_size = 300
-target_embed = nn.Embedding(target_vocab_size , input_size, padding_idx=-1)  # Make sure this is Glove Embeddings
+target_embed = nn.Embedding(target_vocab_size , input_size, padding_idx=-1).cuda()  # Make sure this is Glove Embeddings
 
 tgt_embedding_file = '../Data/source_target_output.npy'
-tgt_embedding = torch.from_numpy(np.load(tgt_embedding_file))
+tgt_embedding = torch.from_numpy(np.load(tgt_embedding_file)).cuda()
 
 target_embed.weight = nn.Parameter(tgt_embedding )
 
@@ -23,7 +23,7 @@ def get_next_token_indices(softmax_vector):
     return required_indices
 
 def get_embedding(indices):
-    return target_embed( indices )
+    return target_embed( indices ).cuda()
 
 
 def get_ground_truth_probab(softmax_vector, question_indices):
@@ -36,10 +36,9 @@ Args:
 '''
 
 
-def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output_size):
+def train_batch(batch, encoder, decoder, attention, mlp,  optimizer, max_output_size):
 
-    for opt in optimizers:
-        opt.zero_grad()
+    optimizer.zero_grad()
 
     # Encoder Initialisations
     eh_0 = None                                     # [batch_size, num_layer * num_directions , encoder_hidden_dim]
@@ -51,7 +50,7 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     # question_batch_indices = batch[1]               # a packed Sequence as Target passages can be of different lengths
     # question_indices_batch, question_lengths = pad_packed_sequence(question_batch_indices, batch_first=True, padding_value=0) # output is of size [Max_seq_length , batch , 2 * hidden_size]
 
-    question_indices_batch = batch[1][0]
+    question_indices_batch = batch[1][0].cuda()
     question_lengths = batch[1][1]
 
     batch_size = len(question_lengths)
@@ -76,12 +75,15 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
     
     decoder_prev_state = (dh_0, dc_0)
     #prev_token = None                              # DEFINE: <SOS>token embedding
-    prev_token = Variable(-1* torch.ones(batch_size,1,300))	# Definition matches with <SOS> embedding defined in data
+    #prev_token = Variable(-1* torch.ones(batch_size,1,300))	# Definition matches with <SOS> embedding defined in data
 
-    prev_token = get_embedding(question_indices_batch[:, 0]).unsqueeze(1)
+    prev_token = get_embedding(question_indices_batch[:, 0])
+    prev_token = prev_token.unsqueeze(1)
+
+    
 
     # Final Size : [Batch_Size, Max_Seq_Length]
-    total__probab__tensor = Variable(torch.ones((batch_size, 1)))
+    total__probab__tensor = Variable(torch.ones((batch_size, 1))).cuda()
     dummy = 0
     for step in range(1, max_output_size):
 
@@ -118,8 +120,7 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizers, max_output
 
     loss.backward()
 
-    for o in optimizers:
-        o.step()
+    optimizer.step()
 
     return loss
         
