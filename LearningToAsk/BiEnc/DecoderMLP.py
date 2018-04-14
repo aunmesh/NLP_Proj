@@ -39,12 +39,13 @@ class DecoderMLP(nn.Module):
 
         self.mlp_wt = nn.Linear(self.enc_h_dim + self.dec_h_dim, self.mlp_h_dim)
         self.mlp_ws = nn.Linear(self.mlp_h_dim, self.target_vocab_size)
+        #print("asghidfvasfv")
+        #print(target_vocab_size)
 
     def forward(self, h_t, c_t):
 
 	h_t = h_t.squeeze(1)
 	
-
         mlp_input = torch.cat((h_t, c_t), 1)
 
         y_temp0 = self.mlp_wt(mlp_input)

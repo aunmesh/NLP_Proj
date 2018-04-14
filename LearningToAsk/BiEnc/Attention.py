@@ -56,26 +56,20 @@ class AttentionContext(nn.Module):
         #decoder_states = decoder_states.contiguos()
 
         # Transformed States of Decoder (Linear Transform) to bring it in the same dimension as encoder_dim
-        decoder_transformed = self.sim_matrix(decoder_states).transpose(1,2)
-
-        # Unsqueezing the 2D Matrix a 3D Matrix for Batch Multiplication Purposes
-        decoder_transformed_mat = decoder_transformed#.unsqueeze(2)
+        decoder_transformed_mat = self.sim_matrix(decoder_states).transpose(1,2)
 
         # Attention Energies are calculated
         # Result is of Size [Batch_size , T]
         attention__energies = torch.bmm(encoder_states , decoder_transformed_mat).squeeze(2)
-
+        
         if mask is not None:
             # Maximum Enerygy for each Sequence, Result is of Size [Batch_size*1]
             shift = attention__energies.max(1)[0]
-
             # Shifting Energies for Numerical Stability
             energy__shifted = attention__energies - shift.expand_as(attention__energies.transpose(0,1)).transpose(0,1)
-
             # Applying Mask after taking exponential so that unwanted indices are reduced to 0 energies,
             # transpose is being taken so that expand as operation can be performed
             energies = energy__shifted.exp() * mask
-
             energies_sum = energies.sum(1).expand_as( torch.transpose(energies,0,1) )
 	    energies_sum = torch.transpose( energies_sum,0,1 )
             alpha = torch.div(energies, energies_sum) #Size [batch_size, T]
@@ -83,7 +77,8 @@ class AttentionContext(nn.Module):
         else:
             # Size [batch_size, T]
             alpha = F.softmax(attention__energies, dim=1)
-
+        
+        alpha = F.softmax(attention__energies, dim=1)
         attended__context = torch.bmm(alpha.unsqueeze(1), encoder_states).squeeze(1)
 
         return attended__context, alpha

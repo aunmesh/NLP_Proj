@@ -9,12 +9,14 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 import numpy as np
 
-target_vocab_size = 28442
+target_vocab_size = 28445
 input_size = 300
 target_embed = nn.Embedding(target_vocab_size , input_size, padding_idx=-1).cuda()  # Make sure this is Glove Embeddings
 
 tgt_embedding_file = '../Data/source_target_output.npy'
 tgt_embedding = torch.from_numpy(np.load(tgt_embedding_file)).cuda()
+
+
 
 target_embed.weight = nn.Parameter(tgt_embedding )
 
@@ -27,8 +29,9 @@ def get_embedding(indices):
 
 
 def get_ground_truth_probab(softmax_vector, question_indices):
-
-    return softmax_vector.gather(1, question_indices.unsqueeze(1) )
+  
+    temp =  softmax_vector.gather(1, question_indices.unsqueeze(1) )
+    return temp
 
 '''
 Args:
@@ -58,6 +61,7 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizer, max_output_
     # Ignoring initial Encoder states for now, encoder_output : [Batch_Size , Max_Seq_Length, 2 * hidden_size]
 
     encoder_output, encoder_output_len, encoder_states, mask_source = encoder(source_batch_indices)
+    torch.cuda.synchronize
     encoder_hidden_states = encoder_states[0]       # [batch, num_layers * num_directions, hidden_size]
     
     encoder_cell_states = encoder_states[1]
@@ -74,8 +78,6 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizer, max_output_
     # dc_0 = torch.zeros( dh_0.size() )
     
     decoder_prev_state = (dh_0, dc_0)
-    #prev_token = None                              # DEFINE: <SOS>token embedding
-    #prev_token = Variable(-1* torch.ones(batch_size,1,300))	# Definition matches with <SOS> embedding defined in data
 
     prev_token = get_embedding(question_indices_batch[:, 0])
     prev_token = prev_token.unsqueeze(1)
@@ -83,9 +85,10 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizer, max_output_
     
 
     # Final Size : [Batch_Size, Max_Seq_Length]
-    total__probab__tensor = Variable(torch.ones((batch_size, 1))).cuda()
+    total_probab_tensor = Variable(torch.ones((batch_size, 1))).cuda()
     dummy = 0
-    for step in range(1, max_output_size):
+
+    for step in range(1, question_indices_batch.size(1)):
 
         decoder_next_output, decoder_next_state = decoder(prev_token, decoder_prev_state)
         context_vec , __ = attention(encoder_output, decoder_next_output, mask_source)
@@ -96,27 +99,26 @@ def train_batch(batch, encoder, decoder, attention, mlp,  optimizer, max_output_
 
         # In the Loss Calculation We only need the probability of the actual Ground truth. Note
 
-	# If the step increases beyond the maximum length of any question in this batch, then we do slicing using a dummy variable. This won't matter as there is no contribution of these in final loss
-	try:
-		temp = get_ground_truth_probab(softmax_vector, question_indices_batch[:, step])
-	except:
-		temp = get_ground_truth_probab(softmax_vector, question_indices_batch[:, dummy])
-
-        total__probab__tensor = torch.cat( (total__probab__tensor, temp), 1)
-
+	
+	temp = get_ground_truth_probab(softmax_vector, question_indices_batch[:, step])
+        total_probab_tensor = torch.cat( (total_probab_tensor, temp), 1)
         prev_token = next_token.unsqueeze(1)                     # List of next embeddings for the decoder
         decoder_prev_state = decoder_next_state
 
+    mask_target = Variable(torch.zeros( batch_size, max(question_lengths) )).cuda()
+    for ind,val in enumerate(question_lengths):
+	    mask_target[ind,:val] = 1
 
-    loss = 0
+    #Representing question lengths as a tensor
+    q_lengths = Variable(torch.from_numpy(np.asarray(question_lengths)).cuda().float())
 
-    for o,l in zip( total__probab__tensor, question_lengths ):
-        temp = -1*torch.log(o[:l])
-        
-        normalizing_factor = l * batch_size
-        temp_sum = torch.sum(temp) / normalizing_factor
+    total_probab_tensor = -1 * torch.log(total_probab_tensor)
+    total_probab_tensor = total_probab_tensor * mask_target
+    total_probab = torch.sum(total_probab_tensor,1)
 
-        loss+=temp_sum
+    total_probab = total_probab/q_lengths
+    total_probab = total_probab/batch_size
+    loss = torch.sum(total_probab,0)
 
     loss.backward()
 
