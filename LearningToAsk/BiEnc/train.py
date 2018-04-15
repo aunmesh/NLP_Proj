@@ -118,7 +118,7 @@ def main():
     use_embedding = True
     source_vocab_size = 49909
     target_vocab_size = 28445
-    mlp_hidden_dim = 50                                # find an apt value from the original torch code
+    mlp_hidden_dim = 100                                # find an apt value from the original torch code
 
     encoder = EncoderLSTM(input_feature_dim, encoder_hidden_dim, use_embedding, source_vocab_size)
     encoder.embed.weight = nn.Parameter(src_embedding)
@@ -127,6 +127,21 @@ def main():
     mlp = DecoderMLP(2*encoder_hidden_dim, mlp_hidden_dim, decoder_hidden_dim, target_vocab_size)
     decoder = DecoderLSTM(encoder_hidden_dim, decoder_hidden_dim)
 
+    
+
+    '''
+    temp_epoch = 8
+    save_dir = "/new_data/gpu/aunmesh/Question_Generation/"
+    encoder_file = save_dir + "Encoder_epoch_" + str(temp_epoch) + ".pt"
+    decoderlstm_file = save_dir + "DecoderLSTM_epoch_" + str(temp_epoch) + ".pt"
+    decodermlp_file = save_dir + "DecoderMLP_epoch_" + str(temp_epoch) + ".pt"
+    attention_file = save_dir + "Attention_epoch_" + str(temp_epoch) + ".pt"
+
+    encoder.load_state_dict(torch.load(encoder_file))
+    decoder.load_state_dict(torch.load(decoderlstm_file))
+    attention.load_state_dict(torch.load(attention_file))
+    mlp.load_state_dict(torch.load(decodermlp_file))
+    '''
 
     encoder = encoder.cuda()
     decoder = decoder.cuda()
@@ -136,7 +151,7 @@ def main():
     #encoder_learning_rate = 1.0
     #decoder_learning_rate = 1.0
 
-    learning_rate = 1.0
+    learning_rate = 1
     #encoder_optimizer = optim.SGD(encoder.parameters(), lr=encoder_learning_rate)
     #decoder_optimizer = optim.SGD(decoder.parameters(), lr=decoder_learning_rate)
     #mlp_optimizer = optim.SGD(mlp.parameters(), lr=decoder_learning_rate)
@@ -146,17 +161,27 @@ def main():
     main_optimizer = optim.SGD(params, lr = learning_rate)
 
     max_output_size = 20
-    epochs = 10
+    epochs = 15
 
     num_iteration = int(data_size / batch_size)
 
     log = [("epoch","iteration","loss")]
 
-    for e in range(0, epochs):
+    log_array = np.ones((epochs * (num_iteration+10),3))
+    log_array = log_array * -1
+
+    scheduler = torch.optim.lr_scheduler.StepLR(main_optimizer, step_size=1, gamma=0.5)
+    for e in range(1, epochs+1):
+
         for it, batch in enumerate(train_loader(batch_size, num_iteration)):
             #print(e, it)
             loss = train_batch(batch, encoder, decoder, attention, mlp,
                                main_optimizer, max_output_size)
+            log_array[e][0] = e
+
+            log_array[e][1] = it
+
+            log_array[e][2] = loss
 
             if it % 6 == 0:
 		print("Epoch " +str(e) + " iteration " + str(it) + " Loss " + str(loss.data) )
@@ -170,7 +195,7 @@ def main():
                 file_log.close()
                 log = []
 
-	if e % 4 == 0:
+	if e % 1 == 0:
 	   	  print("Saving Encoder")
 	   	  torch.save(encoder.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/Encoder_epoch_' + str(e)+ '.pt')
 	   	  print("Saving DecoderLSTM")
@@ -179,6 +204,11 @@ def main():
 	   	  torch.save(mlp.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/DecoderMLP_epoch_' + str(e)+ '.pt')
 	   	  print("Saving Attention Model")
 	   	  torch.save(attention.state_dict(), '/new_data/gpu/aunmesh/Question_Generation/Attention_epoch_' + str(e)+ '.pt')
+
+        #Halving the learning rate after epoch 8
+        if(e > 7):
+            scheduler.step()
+        np.save("log_array.npy",log_array)
 
 
     # Describe loss function
@@ -209,17 +239,6 @@ def main():
 if __name__ == '__main__':
 
     main()
-
-
-
-
-
-
-
-
-
-
-
 
 
 

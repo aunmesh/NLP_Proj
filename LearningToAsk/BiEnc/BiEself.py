@@ -32,7 +32,7 @@ class EncoderLSTM(nn.Module):
         self.use_embedding = use_embedding
         self.vocab_size = vocab_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True, batch_first = True)
+        self.lstm = nn.LSTM(input_size, hidden_size, self.num_layers, bidirectional=True, batch_first = True, dropout = 0.3)
 	self.pad_idx = pad_idx
 
         if self.use_embedding :
